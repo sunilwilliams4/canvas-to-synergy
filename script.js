@@ -493,7 +493,7 @@ class Course {
                             "ASSIGNMENT_NAME": this.assignments[k].name,
                             "ASSIGNMENT_DESCRIPTION": "Canvas URL: " + this.assignments[k].html_url,
                             "MAX_SCORE": this.assignments[k].points_possible,
-                            "POINTS": (currentScore != null) ? currentScore : "",
+                            "POINTS": this.assignments[k].points_possible,
                             "ASSIGNMENT_DATE": assignmentDate.toLocaleDateString(),
                             "DUE_DATE": dueDate.toLocaleDateString(),
                             "SCORE_TYPE": "Raw Score",
