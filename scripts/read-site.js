@@ -140,10 +140,12 @@ function getGradesForCourse(courseId, courseIndex, accessToken) {
 
     getDataAsync(["courses", courseId, "sections", "?include[]=students"], accessToken).then((sections) => {
         sendMessage({message: "doneWithSections", sections: sections, courseIndex: courseIndex})
+        console.log(sections)
     })
 
     getDataAsync(["courses", courseId, "assignments"], accessToken).then((assignments) => {
         sendMessage({message: "doneWithAssignments", assignments: assignments, courseIndex: courseIndex})
+        console.log(assignments)
 
         console.log("loading grades")
         var assignmentScores = []
@@ -154,7 +156,11 @@ function getGradesForCourse(courseId, courseIndex, accessToken) {
     
                     let doneLoadingGrades = true
                     for (let j = 0; j < assignments.length; j++) if (assignmentScores[j] == null) doneLoadingGrades = false
-                    if (doneLoadingGrades) sendMessage({message: "doneWithGrades", grades: assignmentScores, courseIndex: courseIndex})
+                    if (doneLoadingGrades) {
+                        sendMessage({message: "doneWithGrades", grades: assignmentScores, courseIndex: courseIndex})
+                    
+                        console.log(assignmentScores)
+                    }
                 })
             }, i * 150)
         }
@@ -163,6 +169,7 @@ function getGradesForCourse(courseId, courseIndex, accessToken) {
 
     getDataAsync(["courses", courseId, "assignment_groups"], accessToken).then((assignmentGroups) => {
         sendMessage({message: "doneWithGroups", assignmentGroups: assignmentGroups, courseIndex: courseIndex})
+        console.log(assignmentGroups)
     })
 
 

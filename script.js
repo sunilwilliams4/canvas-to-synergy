@@ -269,7 +269,7 @@ class Course {
         if (this.assignments == null) this.assignments = []
         if (this.grades == null) this.grades = []
         if (this.assignmentGroups == null) this.assignmentGroups = []
-        if (this.typeSelections == null) this.typeSelections = []
+        if (this.typeSelections == null) this.typeSelections = {}
         if (this.lastRefreshDate == null) this.lastRefreshDate = null
 
         // make html elements
@@ -444,6 +444,7 @@ class Course {
         // if any data is missing, return
         if (this.sections == null || this.sections == [] || this.assignments == null || this.assignments == [] || this.grades == null || this.grades == [] || this.assignmentGroups == null || this.assignmentGroups == []) return
 
+
         // turn imported data into a JSON
         let exportJSON = {}
         for (let i = 0; i < this.sections.length; i++) {
@@ -455,7 +456,7 @@ class Course {
                     if (this.assignments[k].graded_submissions_exist) {
                         
                         let currentAssignmentType
-                        for (let l = 0; l < this.typeSelections.length; l++) if (this.assignments[k].assignment_group_id == this.assignmentGroups[l].id) currentAssignmentType = this.typeSelections[l]
+                        for (let l = 0; l < this.assignmentGroups.length; l++) if (this.assignments[k].assignment_group_id == this.assignmentGroups[l].id) currentAssignmentType = this.typeSelections[this.assignmentGroups[l].name]
                         let submissionFound = false
                         let currentScore = null
                         let currentExcused = false
@@ -652,10 +653,11 @@ class Course {
             }
             this.typeDropdownOptions.push(currentDropdownOptions)
 
-            if (this.typeSelections.length > 0) typeDropdown.value = this.typeSelections[i]
-            this.typeSelections[i] = typeDropdown.value
+            console.log(this.typeSelections)
+            if (Object.keys(this.typeSelections).length > 0) typeDropdown.value = this.typeSelections[this.assignmentGroups[i].name]
+            this.typeSelections[this.assignmentGroups[i].name] = typeDropdown.value
             typeDropdown.onchange = () => {
-                this.typeSelections[i] = typeDropdown.value
+                this.typeSelections[this.assignmentGroups[i].name] = typeDropdown.value
                 saveCourses()
                 this.convertGrades()
             }
@@ -902,6 +904,7 @@ chrome.storage.local.get(["courseInfos", "accessToken", "types"], (result) => {
     
         for (let i = 0; i < courseInfos.length; i++) {
             courses.push(new Course(courseInfos[i]))
+            console.log(courseInfos[i])
             saveCourses()
         }
     }
