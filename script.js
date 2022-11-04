@@ -265,12 +265,14 @@ class Course {
         this.assignmentGroups = courseInfo.assignmentGroups
         this.typeSelections = courseInfo.typeSelections
         this.lastRefreshDate = courseInfo.lastRefreshDate
+        this.sows = courseInfo.sows
         if (this.sections == null) this.sections = []
         if (this.assignments == null) this.assignments = []
         if (this.grades == null) this.grades = []
         if (this.assignmentGroups == null) this.assignmentGroups = []
         if (this.typeSelections == null) this.typeSelections = {}
         if (this.lastRefreshDate == null) this.lastRefreshDate = null
+        if (this.sows == null) this.sows = false
 
         // make html elements
         this.wrapper = document.createElement("div")
@@ -356,6 +358,8 @@ class Course {
         this.typeDropdownOptions = []
 
         this.lastRefreshLabel
+        this.sowsCheckbox
+        this.sowsLabel
         this.downloadFileButtons = []
 
         this.convertedGrades
@@ -485,16 +489,17 @@ class Course {
                             "STUDENT_PERM_ID": currentStudent.sis_user_id,
                             "STUDENT_LAST_NAME": currentStudent.sortable_name.slice(0, currentStudent.sortable_name.indexOf(", ")),
                             "STUDENT_FIRST_NAME": currentStudent.sortable_name.slice(currentStudent.sortable_name.indexOf(", ") + 2),
-                            "OVERALL_SCORE": currentScore,
+                            "OVERALL_SCORE": (currentScore != null) ? currentScore : "",
                             "ASSIGNMENT_NAME": this.assignments[k].name,
                             "ASSIGNMENT_DESCRIPTION": "Canvas URL: " + this.assignments[k].html_url,
                             "MAX_SCORE": this.assignments[k].points_possible,
-                            "POINTS": currentScore,
+                            "POINTS": (currentScore != null) ? currentScore : "",
                             "ASSIGNMENT_DATE": assignmentDate.toLocaleDateString(),
                             "DUE_DATE": dueDate.toLocaleDateString(),
                             "SCORE_TYPE": "Raw Score",
                             "ASSIGNMENT_TYPE": currentAssignmentType,
-                            "EXCUSED": currentExcused
+                            "EXCUSED": currentExcused,
+                            "SHOW_ONLY_WHEN_SCORED": this.sows
                         })
                     }
                 }
@@ -610,6 +615,8 @@ class Course {
         for (let i = 0; i < this.typeDropdownOptions.length; i++) for (let j = 0; j < this.typeDropdownOptions[i].length; j++) this.typeDropdownOptions[i][j].remove()
         for (let i = 0; i < this.downloadFileButtons.length; i++) this.downloadFileButtons[i].remove()
         if (this.lastRefreshLabel != null) this.lastRefreshLabel.remove()
+        if (this.sowsCheckbox != null) this.sowsCheckbox.remove()
+        if (this.sowsLabel != null) this.sowsLabel.remove()
 
         this.typeMatchers = []
         this.groupLabels = []
@@ -679,6 +686,25 @@ class Course {
         lastRefreshLabel.textContent = this.lastRefreshDate
         this.wrapper.appendChild(lastRefreshLabel)
         this.lastRefreshLabel = lastRefreshLabel
+
+        let sowsCheckbox = document.createElement("input")
+        sowsCheckbox.type = "checkbox"
+        sowsCheckbox.name = "sows"
+        sowsCheckbox.checked = this.sows
+        this.wrapper.appendChild(sowsCheckbox)
+        this.sowsCheckbox = sowsCheckbox
+
+        let sowsLabel = document.createElement("label")
+        sowsLabel.htmlFor = "sows"
+        sowsLabel.textContent = "Show Only When Scored"
+        this.wrapper.appendChild(sowsLabel)
+        this.sowsLabel = sowsLabel
+
+        sowsCheckbox.onchange = () => {
+            this.sows = sowsCheckbox.checked
+            this.convertGrades()
+            saveCourses()
+        }
         
         for (let i = 0; i < this.sections.length; i++) { // create a button for each canvas course section
             let downloadFileButton = document.createElement("button")
@@ -689,6 +715,7 @@ class Course {
             this.downloadFileButtons.push(downloadFileButton)
 
             downloadFileButton.onclick = () => { // download synergy import file (a .xls file with grades for this section)
+                this.convertGrades()
                 console.log(this.sections[i].name)
                 console.log(this.convertedGrades[this.sections[i].name])
 
@@ -882,7 +909,8 @@ function saveCourses() {
             grades: courses[i].grades,
             assignmentGroups: courses[i].assignmentGroups,
             typeSelections: courses[i].typeSelections,
-            lastRefreshDate: courses[i].lastRefreshDate
+            lastRefreshDate: courses[i].lastRefreshDate,
+            sows: courses[i].sows
         })
     }
 
