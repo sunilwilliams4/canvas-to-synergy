@@ -1,7 +1,7 @@
 # Canvas To Synergy
 Created by Sunil Williams
 
-Link to sample demo: https://youtu.be/Hqg5Msl6kjA
+Link to sample screencast: https://youtu.be/Hqg5Msl6kjA
 
 
 ## Description
@@ -12,7 +12,7 @@ Canvas To Synergy is a tool that lets teachers retrieve and download their Canva
 At the moment, Canvas To Synergy needs to be downloaded manually (this is very easy to do!!)
 
 1. Click on the green "Code" dropdown menu and click "download zip"
-2. In google chrome, go to the address: (chrome://extensions
+2. In google chrome, go to the address: chrome://extensions
 3. At the top right of the page, turn on "Developer Mode"
 4. Click the "Load Unpacked" button that should have appeared and select your downloaded zip folder from step 1
 5. In Canvas, go to Account -> Settings
@@ -41,7 +41,7 @@ You must be in lms.pps.net to add courses or refresh grades
 ### Choosing assignment types
 **Background:** Canvas organizes assignments by *assignment group*. Synergy organizes assignments by *assignment type*. You need to clarify which of your *assignment groups* correspond to which of your *assignment types*
 
-**IMPORTANT:** Your *assignment group* organization in Canvas MUST match your *assignment type* organization in Synergy (ex. all tests should have their own *assignment group*)
+**IMPORTANT:** Your *assignment group* organizational system in Canvas MUST match your *assignment type* organization in Synergy (ex. all tests should have their own *assignment group*)
 
 
 ### Downloading Synergy Import Files
