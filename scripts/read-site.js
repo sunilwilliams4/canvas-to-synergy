@@ -143,7 +143,7 @@ function getGradesForCourse(courseId, courseIndex, accessToken) {
         console.log(sections)
     })
 
-    getDataAsync(["courses", courseId, "assignments"], accessToken).then((assignments) => {
+    getDataAsync(["courses", courseId, "assignments", "?include[]=all_dates"], accessToken).then((assignments) => {
         sendMessage({message: "doneWithAssignments", assignments: assignments, courseIndex: courseIndex})
         console.log(assignments)
 

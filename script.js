@@ -696,7 +696,7 @@ class Course {
 
         let sowsLabel = document.createElement("label")
         sowsLabel.htmlFor = "sows"
-        sowsLabel.textContent = "Show Only When Scored"
+        sowsLabel.innerHTML = "Show Only When Scored <br>"
         this.wrapper.appendChild(sowsLabel)
         this.sowsLabel = sowsLabel
 
