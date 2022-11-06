@@ -218,7 +218,7 @@ interfaceButton.style.width = "100%"
 interfaceButton.style.height = "65px"
 interfaceButton.style.backgroundColor = "transparent"
 interfaceButton.style.borderStyle = "none"
-interfaceButton.style.transition = "background-color .25s"
+interfaceButton.style.transition = "background-color .5s"
 var interfaceLogo = document.createElement("img")
 interfaceLogo.src = "https://i.imgur.com/XgIwQf9.png"
 interfaceLogo.width = 40
@@ -247,6 +247,7 @@ canvasMenu.onclick = (event) => {
     console.log(clickedOnInterfaceButton)
     if (clickedOnInterfaceButton) {
         mainWrapper.style.display = ""
+        document.getElementById("not_right_side").style.display = "none"
 
         let otherIcons = document.getElementsByClassName("ic-icon-svg")
         for (let i = 0; i < otherIcons.length; i++) otherIcons[i].style.fill = "#fff"
@@ -260,8 +261,30 @@ canvasMenu.onclick = (event) => {
         interfaceButton.style.backgroundColor = "#fff"
     }
     else {
-        //mainWrapper.style.display = "none"
+        interfaceButton.style.backgroundColor = "transparent"
+        for (let i = 0; i < event.path.length; i++) {
+            if (event.path[i].classList != null && event.path[i].classList.contains("ic-icon-svg")) event.path[i].style.fill = "var(--ic-brand-global-nav-ic-icon-svg-fill--active)"
+            if (event.path[i].classList != null && event.path[i].classList.contains("menu-item__text")) event.path[i].style.color = "var(--ic-brand-global-nav-ic-icon-svg-fill--active)"
+            if (event.path[i].classList != null && event.path[i].classList.contains("ic-app-header__menu-list-link")) event.path[i].style.backgroundColor = "#fff"
+        }
     }
+}
+
+document.onclick = (event) => {
+    if (mainWrapper.style.display == "" && event.path.find(element => element == canvasMenu) == null) {
+        let otherIcons = document.getElementsByClassName("ic-icon-svg")
+        for (let i = 0; i < otherIcons.length; i++) otherIcons[i].style.fill = "#fff"
+        
+        let otherNames = document.getElementsByClassName("menu-item__text")
+        for (let i = 0; i < otherNames.length; i++) otherNames[i].style.color = "#fff"
+    
+        let otherButtons = document.getElementsByClassName("ic-app-header__menu-list-link")
+        for (let i = 0; i < otherButtons.length; i++) otherButtons[i].style.backgroundColor = "transparent"
+    
+        interfaceButton.style.backgroundColor = "#fff"
+
+    }
+    
 }
 
 
@@ -298,7 +321,7 @@ headerWrapper.appendChild(headerCurrentPage)
 let sideBarWrapper = document.createElement("div")
 sideBarWrapper.classList.add("list-view")
 sideBarWrapper.style.position = "absolute"
-sideBarWrapper.style.width = "250px"
+sideBarWrapper.style.width = "192px"
 sideBarWrapper.style.left = "0px"
 sideBarWrapper.style.top = "105px"
 sideBarWrapper.style.overflowY = "hidden"
@@ -355,10 +378,10 @@ class Section {
         //this.wrapper.classList.add("ic-app-main-content")
         this.wrapper.style.backgroundColor = "white"
         this.wrapper.style.position = "absolute"
-        this.wrapper.style.top = "100px"
-        this.wrapper.style.left = "275px"
-        this.wrapper.style.width = "calc(100% - 275px)"
-        this.wrapper.style.height = "calc(100% - 100px)"
+        this.wrapper.style.top = "75px"
+        this.wrapper.style.left = "225px"
+        this.wrapper.style.width = "calc(100% - 225px)"
+        this.wrapper.style.height = "calc(100% - 75px)"
         this.wrapper.style.overflowY = "auto"
         this.wrapper.style.display = "none"
         mainWrapper.appendChild(this.wrapper)
@@ -369,7 +392,7 @@ class Section {
 
         this.title = document.createElement("h1")
         this.title.classList.add("title")
-        this.title.textContent = title
+        this.title.innerHTML = "<br>" + title
         this.titleWrapper.appendChild(this.title)
     }
 
@@ -581,17 +604,18 @@ class CourseSection extends Section {
 
         this.typeSelectorWrapper = document.createElement("div")
         this.typeSelectorWrapper.style = `
-            margin: 10px;`
+            margin: 10px;
+            width: 950px;`
         this.wrapper.appendChild(this.typeSelectorWrapper)
 
         this.groupsTitle = document.createElement("span")
         this.groupsTitle.style.float = "left"
-        this.groupsTitle.textContent = "Assignment Groups (Canvas)"
+        this.groupsTitle.textContent = "Assignment Group (Canvas)"
         this.typeSelectorWrapper.appendChild(this.groupsTitle)
 
         this.typesTitle = document.createElement("span")
         this.typesTitle.style.float = "right"
-        this.typesTitle.textContent = "Assignment Types (Synergy)"
+        this.typesTitle.textContent = "Assignment Type (Synergy)"
         this.typeSelectorWrapper.appendChild(this.typesTitle)
 
         this.typeSelectorWrapper.innerHTML += "<br>"
@@ -639,10 +663,10 @@ class CourseSection extends Section {
             typeMatcher.innerHTML = "<br>"
             
             typeMatcher.style = `
-                padding: 10px;
+                padding: 0px;
                 border-top-style: solid;
                 border-color: lightgray`
-            this.wrapper.appendChild(typeMatcher)
+            this.typeSelectorWrapper.appendChild(typeMatcher)
             this.typeMatchers.push(typeMatcher)
 
             
@@ -659,7 +683,7 @@ class CourseSection extends Section {
                 background-color: green;
                 cursor: pointer;
                 transition: background-color .25s;`
-            typeDropdown.title = "Select the appropriate Synergy assignment type for the assignment grop to the left"
+            typeDropdown.title = "Select the appropriate Synergy assignment type for the assignment group to the left"
             typeDropdownWrapper.appendChild(typeDropdown)
 
             for (let j = 0; j < types.length; j++) {
@@ -683,6 +707,11 @@ class CourseSection extends Section {
                 width: 175px;
                 background-color: var(--ic-brand-primary);`
             groupLabel.textContent = this.assignmentGroups[i].name
+            let groupLabelTitle = ""
+            for (let j = 0; j < this.assignments.length; j++) if (this.assignments[j].assignment_group_id == this.assignmentGroups[i].id) groupLabelTitle += this.assignments[j].name + ", "
+            groupLabelTitle = groupLabelTitle.slice(0, -2)
+            groupLabel.title = groupLabelTitle
+
             typeMatcher.appendChild(groupLabel)
 
             
@@ -867,7 +896,17 @@ class CourseSection extends Section {
             this.assignments = optimizedAssignments
             console.log(assignments)
 
+            this.makeTypeMatchers()
+
             console.log("loading grades")
+/*
+            var submissionsParameters = "?student_ids[]=all"
+            for (let i = 0; i < assignments.length; i++) submissionsParameters += "&assignment_ids[]=" + assignments[i].id
+
+            getDataAsync(["courses", this.id, "students", "submissions", submissionsParameters], accessToken).then((scores) => {
+                console.log(scores)
+            })
+*/
             var assignmentScores = []
             for (let i = 0; i < assignments.length; i++) {
                 window.setTimeout(() => {
