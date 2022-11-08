@@ -963,7 +963,8 @@ class CourseSection extends Section {
         for (let i = 0; i < this.sections.length; i++) {
             let currentSection = this.sections[i].name
             exportJSON[currentSection] = []
-            for (let j = 0; j < this.sections[i].students.length; j++) {
+            
+            if (this.sections[i].students != null) for (let j = 0; j < this.sections[i].students.length; j++) {
                 let currentStudent = this.sections[i].students[j]
                 for (let k = 0; k < this.grades.length; k++) {
                     if (this.assignments[k].graded_submissions_exist) {
