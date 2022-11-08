@@ -362,10 +362,44 @@ class SectionLink {
             }
         }
     }
+
+    delete() {
+        SectionLink.allSectionLinks.splice(SectionLink.allSectionLinks.indexOf(this), 1)
+        this.wrapper.remove()
+    }
 }
 
 
 
+class Loading {
+    constructor(parent) {
+        this.image = document.createElement("img")
+        this.image.src = "https://i.imgur.com/XgIwQf9.png"
+        this.image.classList.add("loadingImage")
+        this.image.style.width = "20px"
+        this.image.style.height = "20px"
+        this.image.style.marginLeft = "10px"
+        parent.appendChild(this.image)
+
+    }
+
+    startLoading() {
+        this.image.src = "https://i.imgur.com/XgIwQf9.png"
+        this.angle = 0
+        this.interval = setInterval(this.refresh, 20, this)
+    }
+
+    refresh(object) {
+        object.angle += .05
+        object.image.style.transform = "rotate(" + object.angle + "rad)"
+    }
+
+    endAnimation(object) {
+        clearInterval(object.interval)
+        object.image.style.transform = "rotate(0)"
+        object.image.src = "https://i.imgur.com/CFXRbPB.png"
+    }
+}
 
 
 
@@ -404,6 +438,11 @@ class Section {
             }
             else Section.allSections[i].wrapper.style.display = "none"
         }
+    }
+
+    delete() {
+        Section.allSections.splice(Section.allSections.indexOf(this), 1)
+        this.wrapper.remove()
     }
 
 
@@ -583,8 +622,31 @@ class CourseSection extends Section {
         if (this.sows == null) this.sows = false
 
 
+
         this.sideBarLink = new SectionLink(this.name, this)
 
+        this.removeButton = document.createElement("button")
+        this.removeButton.classList.add("Button", "Button-primary")
+        this.removeButton.style.marginRight = "10px"
+        this.removeButton.style.color = "white"
+        this.removeButton.style.transition = "background-color .25s"
+        this.removeButton.style.backgroundColor = "var(--fOyUs-backgroundDanger)"
+        this.removeButton.onmouseover = () => { this.removeButton.style.backgroundColor = "var(--fOyUs-focusColorDanger)" }
+        this.removeButton.onmouseleave = () => { this.removeButton.style.backgroundColor = "var(--fOyUs-backgroundDanger)" }
+        this.removeButton.style.border = "1px solid"
+        this.removeButton.style.borderColor = "var(--fOyUs-borderColorDanger)"
+        this.removeButton.textContent = "Remove This Course"
+        this.removeButton.title = "remove this course from your canvas to synergy course list"
+        this.wrapper.appendChild(this.removeButton)
+
+        this.removeButton.onclick = () => {
+            this.sideBarLink.delete()
+            super.delete()
+
+            courseSections.splice(courseSections.indexOf(this), 1)
+            homeSection.sideBarLink.link.click()
+        }
+        
         this.refreshGradesButton = document.createElement("button")
         this.refreshGradesButton.classList.add("Button", "Button-primary")
         this.refreshGradesButton.style.color = "white"
@@ -597,15 +659,19 @@ class CourseSection extends Section {
         this.refreshGradesButton.textContent = "Refresh Grades For This Course"
         this.wrapper.appendChild(this.refreshGradesButton)
 
+        this.loading = new Loading(this.refreshGradesButton)
+
         this.refreshGradesButton.onclick = () => {
             this.fetchGrades()
+
+            this.loading.startLoading()
         }
 
 
         this.typeSelectorWrapper = document.createElement("div")
         this.typeSelectorWrapper.style = `
             margin: 10px;
-            width: 950px;`
+            width: calc(100% - 100px);`
         this.wrapper.appendChild(this.typeSelectorWrapper)
 
         this.groupsTitle = document.createElement("span")
@@ -837,13 +903,31 @@ class CourseSection extends Section {
             
             let tableXML = `<thead valign = "top" style = "background-color: var(--ic-brand-button--primary-bgd); color: white; border: 1px solid white;">`
             tableXML += "<tr>"
-            for (let columnName in currentGradesJSON[0]) tableXML += "<th>" + columnName + "</th>"
+            for (let columnName in currentGradesJSON[0]) if (
+                columnName == "STUDENT_LAST_NAME" || 
+                columnName == "STUDENT_FIRST_NAME" || 
+                columnName == "ASSIGNMENT_NAME" || 
+                columnName == "OVERALL_SCORE" ||
+                columnName == "MAX_SCORE" ||
+                columnName == "ASSIGNMENT_TYPE" ||
+                columnName == "EXCUSED" ||
+                columnName == "SHOW_ONLY_WHEN_SCORED"
+            ) tableXML += "<th>" + columnName + "</th>"
             tableXML += "</tr></thead><tbody>"
 
             for (let i = 0; i < currentGradesJSON.length; i++) {
                 tableXML += "<tr>"
                 for (let columnName in currentGradesJSON[i]) {
-                    tableXML += `<td style = "border: 1px solid gray;">` + currentGradesJSON[i][columnName] + "</td>"
+                    if (
+                        columnName == "STUDENT_LAST_NAME" || 
+                        columnName == "STUDENT_FIRST_NAME" || 
+                        columnName == "ASSIGNMENT_NAME" || 
+                        columnName == "OVERALL_SCORE" ||
+                        columnName == "MAX_SCORE" ||
+                        columnName == "ASSIGNMENT_TYPE" ||
+                        columnName == "EXCUSED" ||
+                        columnName == "SHOW_ONLY_WHEN_SCORED"
+                    ) tableXML += `<td style = "border: 1px solid gray;">` + currentGradesJSON[i][columnName] + "</td>"
                 }
                 tableXML += "</tr>"
             }
@@ -856,7 +940,7 @@ class CourseSection extends Section {
             sectionTable.style.overflowX = "auto"
             sectionTable.style.overflowY = "auto"
             sectionTable.style.borderSpacing  = "0"
-            sectionTable.style.fontSize = "7px"
+            sectionTable.style.fontSize = "15px"
             sectionTable.innerHTML = tableXML
             this.wrapper.appendChild(sectionTable)
             this.gradesPreviewTables.push(sectionTable)
@@ -936,6 +1020,8 @@ class CourseSection extends Section {
                             this.convertGrades()
                             this.makeTypeMatchers()
                             saveCourses()
+
+                            this.loading.endAnimation(this.loading)
                         }
                     })
                 }, i * 150)
