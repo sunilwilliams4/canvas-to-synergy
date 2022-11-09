@@ -11,6 +11,7 @@ meow
 
 // READ CANVAS DATA //
 
+
 function getPaginationLinks(header) {
     let currentStartIndex = 0
     let currentEndIndex = 0
@@ -486,7 +487,7 @@ class HomeSection extends Section {
 
 
         let accessTokenLabel = document.createElement("span")
-        accessTokenLabel.innerHTML = "<br>Access Token: "
+        accessTokenLabel.innerHTML = "<br>Access Token (optional): "
         this.wrapper.appendChild(accessTokenLabel)
 
         this.accessTokenInput = document.createElement("input")
@@ -692,6 +693,47 @@ class HomeSection extends Section {
             termEndDate = fourthQuarterDate
         }
     }
+
+}
+
+
+class SettingsSection extends Section {
+
+    constructor() {
+        super("Settings")
+        
+        this.sideBarLink = new SectionLink("Settings", this)
+
+
+        this.getRawDataInput = document.createElement("input")
+        this.getRawDataInput.type = "text"
+        this.wrapper.appendChild(this.getRawDataInput)
+
+        this.getButton = document.createElement("button")
+        this.getButton.classList.add("Button", "Button-primary")
+        this.getButton.style.marginLeft = "10px"
+        this.getButton.style.color = "white"
+        this.getButton.style.transition = "background-color .25s"
+        this.getButton.style.backgroundColor = "var(--ic-brand-button--primary-bgd)"
+        this.getButton.onmouseover = () => { this.getButton.style.backgroundColor = "var(--ic-brand-button--primary-bgd-darkened-5)" }
+        this.getButton.onmouseleave = () => { this.getButton.style.backgroundColor = "var(--ic-brand-button--primary-bgd)" }
+        this.getButton.style.border = "1px solid"
+        this.getButton.style.borderColor = "var(--ic-brand-button--primary-bgd-darkened-15)"
+        this.getButton.textContent = "Save"
+        this.wrapper.appendChild(this.getButton)
+
+        this.rawDataText = document.createElement("span")
+        this.rawDataText.innerHTML = "<br>"
+        this.wrapper.appendChild(this.rawDataText)
+
+        this.getButton.onclick = () => {
+            getDataAsync([this.getRawDataInput.value], accessToken).then((data) => {
+                this.rawDataText.innerHTML = "<br>" + JSON.stringify(data, null, "<br>")
+            })
+        }
+    }
+
+
 
 }
 
@@ -1245,6 +1287,7 @@ function saveCourses() {
 }
 
 var homeSection = new HomeSection()
+var settingsSection = new SettingsSection()
 
 headerHomeLink.onclick = () => {
     homeSection.sideBarLink.link.click()
@@ -1288,7 +1331,7 @@ chrome.storage.local.get(["accessToken", "types", "courseInfos"], (result) => {
     accessToken = result.accessToken
 
     homeSection.accessTokenInput.value = accessToken
-    if (accessToken != null) getCoursesAsync()
+    getCoursesAsync()
 
     types = (result.types != null) ? JSON.parse(result.types) : null
 
