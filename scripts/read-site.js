@@ -458,7 +458,6 @@ var fourthQuarterDate = new Date(2023, 5, 13)
 var termStartDate = yearStartDate
 var termEndDate = firstQuarterDate
 
-const termSelector = document.getElementById("gradingPeriodSelector")
 function setTermDates() {
     if (termSelector.value == 1) {
         termStartDate = yearStartDate
@@ -521,12 +520,11 @@ class HomeSection extends Section {
         
 
         let sampleFileLabel = document.createElement("span")
-        sampleFileLabel.innerHTML = "<br>Synergy Sample File: "
+        sampleFileLabel.innerHTML = "<br>Upload New Synergy Sample File: "
         this.wrapper.appendChild(sampleFileLabel)
 
         this.massImportInput = document.createElement("input")
         this.massImportInput.type = "file"
-        this.massImportInput.name = "massImportInput"
         
         this.wrapper.appendChild(this.massImportInput)
         
@@ -548,6 +546,48 @@ class HomeSection extends Section {
             }
         }
 
+        this.termSelectorLabel = document.createElement("span")
+        this.termSelectorLabel.innerHTML = "<br>Select Current Grading Period: "
+        this.wrapper.appendChild(this.termSelectorLabel)
+
+        this.termSelector = document.createElement("select")
+        this.termSelector.innerHTML = `
+            <option value = "1">Quarter 1</option>
+            <option value = "2">Quarter 2</option>
+            <option value = "3">Quarter 3</option>
+            <option value = "4">Quarter 4</option>`
+        chrome.storage.local.get(["currentTerm"], (result) => { this.termSelector.value = result.currentTerm })
+        this.wrapper.appendChild(this.termSelector)
+
+        this.setTermDates()
+        this.termSelector.onchange = () => {
+            if (this.termSelector.value == 1) {
+                termStartDate = yearStartDate
+                termEndDate = firstQuarterDate
+            }
+            if (this.termSelector.value == 2) {
+                termStartDate = yearStartDate
+                termEndDate = secondQuarterDate
+            }
+            if (this.termSelector.value == 3) {
+                termStartDate = secondQuarterDate
+                termEndDate = thirdQuarterDate
+            }
+            if (this.termSelector.value == 4) {
+                termStartDate = secondQuarterDate
+                termEndDate = fourthQuarterDate
+            }
+
+            chrome.storage.local.set({currentTerm: this.termSelector.value}).then(() => {
+                console.log("current term saved")
+            })
+        }
+        
+
+
+        this.fileLineBreak = document.createElement("br")
+        this.wrapper.appendChild(this.fileLineBreak)
+
 
         // SET TERM DATES
 
@@ -567,33 +607,90 @@ class HomeSection extends Section {
         this.currentCourses = currentCourses
 
         for (let i = 0; i < this.currentCourses.length; i++) {
-            let courseLabel = document.createElement("div")
-            courseLabel.innerText = this.currentCourses[i].name + " (" + this.currentCourses[i].id + ")"
-            this.wrapper.appendChild(courseLabel)
-            this.addCourseLabels.push(courseLabel)
+
+            let alreadyAdded = false
+            for (let j = 0; j < courseSections.length; j++) if (courseSections[j].id == this.currentCourses[i].id) alreadyAdded = true
+
+            let color = "var(--ic-brand-button--primary-bgd)"
+            let hoverColor = "var(--ic-brand-button--primary-bgd-darkened-5)"
+            let borderColor = "var(--ic-brand-button--primary-bgd-darkened-15)"
+            let text = "+ Add"
+            let disabled = false
+
+            if (alreadyAdded) {
+                color = "var(--fOyUs-backgroundSuccess)"
+                hoverColor = "var(--fOyUs-focusColorSuccess)"
+                borderColor = "var(--fOyUs-borderColorSuccess)"
+                text = "Added"
+                disabled = true
+            }
+
+            let extraInfo = ""
+            if (currentCourses[i].workflow_state == "available") extraInfo += ` <i style = "color: green">available</i>`
+            else extraInfo += ` <i style = "color: darkgray">` + currentCourses[i].workflow_state + "</i>"
+            if (currentCourses[i].end_at != null) {
+                let endAtDate = new Date(currentCourses[i].end_at)
+                if (endAtDate.getTime() <= secondQuarterDate.getTime()) extraInfo += ` <i style = "color: gray">first semester</i>`
+                else if (endAtDate.getTime() <= fourthQuarterDate.getTime()) extraInfo += ` <i style = "color: gray">second semester</i>`
+            }
+
 
             let courseButton = document.createElement("button")
             courseButton.classList.add("Button", "Button-primary")
-            courseButton.style.marginLeft = "10px"
+            courseButton.style.margin = "5px"
             courseButton.style.color = "white"
             courseButton.style.transition = "background-color .25s"
-            courseButton.style.backgroundColor = "var(--ic-brand-button--primary-bgd)"
-            courseButton.onmouseover = () => { courseButton.style.backgroundColor = "var(--ic-brand-button--primary-bgd-darkened-5)" }
-            courseButton.onmouseleave = () => { courseButton.style.backgroundColor = "var(--ic-brand-button--primary-bgd)" }
+            courseButton.style.backgroundColor = color
+            courseButton.onmouseover = () => { courseButton.style.backgroundColor = hoverColor }
+            courseButton.onmouseleave = () => { courseButton.style.backgroundColor = color }
             courseButton.style.border = "1px solid"
-            courseButton.style.borderColor = "var(--ic-brand-button--primary-bgd-darkened-15)"
-            courseButton.textContent = "+ Add"
+            courseButton.style.borderColor = borderColor
+            courseButton.textContent = text
+            courseButton.disabled = disabled
             this.wrapper.appendChild(courseButton)
             this.addCourseButtons.push(courseButton)
+
+            let courseLabel = document.createElement("span")
+            courseLabel.innerHTML = this.currentCourses[i].name + " (" + this.currentCourses[i].id + ")" + extraInfo + "<br>"
+            this.wrapper.appendChild(courseLabel)
+            this.addCourseLabels.push(courseLabel)
 
             courseButton.onclick = () => {
                 courseSections.push(new CourseSection({
                     name: this.currentCourses[i].name,
                     id: this.currentCourses[i].id
                 }))
+                
+                courseButton.style.backgroundColor = "var(--fOyUs-backgroundSuccess)"
+                courseButton.onmouseover = () => { courseButton.style.backgroundColor = "var(--ic-brand-button--primary-bgd-darkened-5)" }
+                courseButton.onmouseleave = () => { courseButton.style.backgroundColor = "var(--fOyUs-backgroundSuccess)" }
+                courseButton.style.borderColor = "var(--fOyUs-borderColorSuccess)"
+                courseButton.textContent = "Added"
+                courseButton.disabled = true
             }
         }
 
+    }
+
+    
+    setTermDates() {
+        
+        if (this.termSelector.value == 1) {
+            termStartDate = yearStartDate
+            termEndDate = firstQuarterDate
+        }
+        if (this.termSelector.value == 2) {
+            termStartDate = yearStartDate
+            termEndDate = secondQuarterDate
+        }
+        if (this.termSelector.value == 3) {
+            termStartDate = secondQuarterDate
+            termEndDate = thirdQuarterDate
+        }
+        if (this.termSelector.value == 4) {
+            termStartDate = secondQuarterDate
+            termEndDate = fourthQuarterDate
+        }
     }
 
 }
@@ -611,14 +708,14 @@ class CourseSection extends Section {
         this.grades = courseInfo.grades
         this.assignmentGroups = courseInfo.assignmentGroups
         this.typeSelections = courseInfo.typeSelections
-        this.lastRefreshDate = courseInfo.lastRefreshDate
+        this.lastSaveDate = courseInfo.lastSaveDate
         this.sows = courseInfo.sows
         if (this.sections == null) this.sections = []
         if (this.assignments == null) this.assignments = []
         if (this.grades == null) this.grades = []
         if (this.assignmentGroups == null) this.assignmentGroups = []
         if (this.typeSelections == null) this.typeSelections = {}
-        if (this.lastRefreshDate == null) this.lastRefreshDate = null
+        if (this.lastSaveDate == null) this.lastSaveDate = null
         if (this.sows == null) this.sows = false
 
 
@@ -644,6 +741,8 @@ class CourseSection extends Section {
             super.delete()
 
             courseSections.splice(courseSections.indexOf(this), 1)
+            saveCourses()
+            homeSection.populateCurrentCourses(homeSection.currentCourses)
             homeSection.sideBarLink.link.click()
         }
         
@@ -693,6 +792,7 @@ class CourseSection extends Section {
         this.sowsLabel
 
         this.saveChangesButton
+        this.lastSaveDateLabel
 
         this.downloadFileButtonBreaks = []
         this.downloadFileButtons = []
@@ -714,6 +814,7 @@ class CourseSection extends Section {
         if (this.downloadFileButtonBreaks[0] != null) for (let i = 0; i < this.downloadFileButtonBreaks.length; i++) this.downloadFileButtonBreaks[i].remove()
         if (this.downloadFileButtons[0] != null) for (let i = 0; i < this.downloadFileButtons.length; i++) this.downloadFileButtons[i].remove()
         if (this.saveChangesButton != null) this.saveChangesButton.remove()
+        if (this.lastSaveDateLabel != null) this.lastSaveDateLabel.remove()
         if (this.sowsCheckbox != null) this.sowsCheckbox.remove()
         if (this.sowsLabel != null) this.sowsLabel.remove()
 
@@ -816,6 +917,12 @@ class CourseSection extends Section {
         saveChangesButton.textContent = "Save Changes"
         this.wrapper.appendChild(saveChangesButton)
         this.saveChangesButton = saveChangesButton
+
+        let lastSaveDateLabel = document.createElement("span")
+        lastSaveDateLabel.style.color = "var(--Vmatu-toggleBackgroundWarning)"
+        lastSaveDateLabel.textContent = this.lastSaveDate
+        this.wrapper.appendChild(lastSaveDateLabel)
+        this.lastSaveDateLabel = lastSaveDateLabel
 
         saveChangesButton.onclick = () => {
             this.convertGrades()
@@ -921,13 +1028,16 @@ class CourseSection extends Section {
                     if (
                         columnName == "STUDENT_LAST_NAME" || 
                         columnName == "STUDENT_FIRST_NAME" || 
-                        columnName == "ASSIGNMENT_NAME" || 
                         columnName == "OVERALL_SCORE" ||
                         columnName == "MAX_SCORE" ||
                         columnName == "ASSIGNMENT_TYPE" ||
                         columnName == "EXCUSED" ||
                         columnName == "SHOW_ONLY_WHEN_SCORED"
                     ) tableXML += `<td style = "border: 1px solid gray;">` + currentGradesJSON[i][columnName] + "</td>"
+
+                    else if (columnName == "ASSIGNMENT_NAME") {
+                        tableXML += `<td style = "border: 1px solid gray;"><a href = "` + currentGradesJSON[i]["ASSIGNMENT_DESCRIPTION"].slice(12) + `" target = "_blank">` + currentGradesJSON[i][columnName] + "</a></td>"
+                    }
                 }
                 tableXML += "</tr>"
             }
@@ -1111,6 +1221,8 @@ class CourseSection extends Section {
 
 
 function saveCourses() {
+    let currentDate = new Date(Date.now())
+    for (let i = 0; i < courseSections.length; i++) { courseSections[i].lastSaveDate = " Last Saved At: " + currentDate.toLocaleString(); courseSections[i].makeTypeMatchers() }
     let courseInfos = []
     for (let i = 0; i < courseSections.length; i++) {
         courseInfos.push({
@@ -1122,7 +1234,7 @@ function saveCourses() {
             grades: courseSections[i].grades,
             assignmentGroups: courseSections[i].assignmentGroups,
             typeSelections: courseSections[i].typeSelections,
-            lastRefreshDate: courseSections[i].lastRefreshDate,
+            lastSaveDate: courseSections[i].lastSaveDate,
             sows: courseSections[i].sows
         })
     }
