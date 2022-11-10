@@ -393,24 +393,6 @@ var fourthQuarterDate = new Date(2023, 5, 13)
 var termStartDate = yearStartDate
 var termEndDate = firstQuarterDate
 
-function setTermDates() {
-    if (termSelector.value == 1) {
-        termStartDate = yearStartDate
-        termEndDate = firstQuarterDate
-    }
-    if (termSelector.value == 2) {
-        termStartDate = yearStartDate
-        termEndDate = secondQuarterDate
-    }
-    if (termSelector.value == 3) {
-        termStartDate = secondQuarterDate
-        termEndDate = thirdQuarterDate
-    }
-    if (termSelector.value == 4) {
-        termStartDate = secondQuarterDate
-        termEndDate = fourthQuarterDate
-    }
-}
 
 class HomeSection extends Section {
     constructor() {
@@ -419,6 +401,46 @@ class HomeSection extends Section {
 
         this.sideBarLink = new SectionLink("Home", this)
 
+
+        this.termSelectorLabel = document.createElement("span")
+        this.termSelectorLabel.innerHTML = "<br>Select Current Grading Period: "
+        this.wrapper.appendChild(this.termSelectorLabel)
+
+        this.termSelector = document.createElement("select")
+        this.termSelector.innerHTML = `
+            <option value = "1">Quarter 1</option>
+            <option value = "2">Quarter 2</option>
+            <option value = "3">Quarter 3</option>
+            <option value = "4">Quarter 4</option>`
+        chrome.storage.local.get(["currentTerm"], (result) => { this.termSelector.value = result.currentTerm })
+        this.wrapper.appendChild(this.termSelector)
+
+        this.setTermDates()
+        this.termSelector.onchange = () => {
+            if (this.termSelector.value == 1) {
+                termStartDate = yearStartDate
+                termEndDate = firstQuarterDate
+            }
+            if (this.termSelector.value == 2) {
+                termStartDate = yearStartDate
+                termEndDate = secondQuarterDate
+            }
+            if (this.termSelector.value == 3) {
+                termStartDate = secondQuarterDate
+                termEndDate = thirdQuarterDate
+            }
+            if (this.termSelector.value == 4) {
+                termStartDate = secondQuarterDate
+                termEndDate = fourthQuarterDate
+            }
+
+            chrome.storage.local.set({currentTerm: this.termSelector.value}).then(() => {
+                console.log("current term saved")
+            })
+        }
+        
+        this.termSelectorLineBreak = document.createElement("br")
+        this.wrapper.appendChild(this.termSelectorLineBreak)
 
 
         this.currentCourses = []
@@ -501,6 +523,26 @@ class HomeSection extends Section {
 
     }
 
+    
+    setTermDates() {
+        if (this.termSelector.value == 1) {
+            termStartDate = yearStartDate
+            termEndDate = firstQuarterDate
+        }
+        if (this.termSelector.value == 2) {
+            termStartDate = yearStartDate
+            termEndDate = secondQuarterDate
+        }
+        if (this.termSelector.value == 3) {
+            termStartDate = secondQuarterDate
+            termEndDate = thirdQuarterDate
+        }
+        if (this.termSelector.value == 4) {
+            termStartDate = secondQuarterDate
+            termEndDate = fourthQuarterDate
+        }
+    }
+
 
 }
 
@@ -540,43 +582,6 @@ class SettingsSection extends Section {
             }
         }
 
-        this.termSelectorLabel = document.createElement("span")
-        this.termSelectorLabel.innerHTML = "<br>Select Current Grading Period: "
-        this.wrapper.appendChild(this.termSelectorLabel)
-
-        this.termSelector = document.createElement("select")
-        this.termSelector.innerHTML = `
-            <option value = "1">Quarter 1</option>
-            <option value = "2">Quarter 2</option>
-            <option value = "3">Quarter 3</option>
-            <option value = "4">Quarter 4</option>`
-        chrome.storage.local.get(["currentTerm"], (result) => { this.termSelector.value = result.currentTerm })
-        this.wrapper.appendChild(this.termSelector)
-
-        this.setTermDates()
-        this.termSelector.onchange = () => {
-            if (this.termSelector.value == 1) {
-                termStartDate = yearStartDate
-                termEndDate = firstQuarterDate
-            }
-            if (this.termSelector.value == 2) {
-                termStartDate = yearStartDate
-                termEndDate = secondQuarterDate
-            }
-            if (this.termSelector.value == 3) {
-                termStartDate = secondQuarterDate
-                termEndDate = thirdQuarterDate
-            }
-            if (this.termSelector.value == 4) {
-                termStartDate = secondQuarterDate
-                termEndDate = fourthQuarterDate
-            }
-
-            chrome.storage.local.set({currentTerm: this.termSelector.value}).then(() => {
-                console.log("current term saved")
-            })
-        }
-        
 
         let accessTokenLabel = document.createElement("span")
         accessTokenLabel.innerHTML = "<br>Access Token (optional): "
@@ -693,6 +698,54 @@ class SettingsSection extends Section {
 
     }
     
+}
+
+
+class HelpSection extends Section {
+    constructor() {
+        super("Help")
+
+        this.sideBarLink = new SectionLink("Help", this)
+        
+
+        this.instructionsBody = document.createElement("p")
+        this.instructionsBody.innerHTML = `
+        <br><i style = "color: green;"><b>On First Time Use</b></i>
+        <br> - Go to <b>Import Assignments</b> under the <b>Grade Book</b> dropdown menu in Synergy
+        <br> - Click on the <b>Download Sample File</b> button
+        <br>
+        <br><i style = "color: green;"><b>On Everyday Use</b></i>
+        <br> - In the Canvas To Synergy <b>Home</b> page select the grading period you would like to import grades for
+        <br> - Refresh Grades for your courses
+        <br> - Download Synergy import files
+        <br> - Upload files to Synergy
+        <br>
+        <br><i style = "color: green;"><b>Adding Classes</b></i>
+        <br> - In the Canvas To Synergy home page click <b>+ Add</b> for courses that you would like to import grades for
+        <br>
+        <br><i style = "color: green;"><b>Removing Classes</b></i>
+        <br> - In a Canvas To Synergy course page click <b>Remove This Course</b>
+        <br> - <i style = "color: darkgray">This only affects your Canvas To Synergy preferences, Canvas To Synergy cannot delete your actual courses</i>
+        <br>
+        <br><i style = "color: green;"><b>Loading Grades</b></i>
+        <br> - In a Canvas To Synergy course page click <b>Refresh Grades For This Class</b>
+        <br> - Wait until loading animation has finished before moving on to downloading
+        <br>
+        <br><i style = "color: green;"><b>Downloading Synergy Import Files</b></i>
+        <br> - In a Canvas To Synergy <b>Course/<b> page click <b>Refresh Grades For This Class</b>
+        <br> - Wait until loading animation has finished before moving on to downloading
+        <br>
+        <br>
+        <br>
+        
+        `
+
+        this.wrapper.appendChild(this.instructionsBody)
+
+
+    }
+
+
 }
 
 
@@ -1258,6 +1311,7 @@ function saveCourses() {
 
 var homeSection = new HomeSection()
 var settingsSection = new SettingsSection()
+var helpSection = new HelpSection()
 
 headerHomeLink.onclick = () => {
     homeSection.sideBarLink.link.click()
