@@ -605,6 +605,7 @@ class SettingsSection extends Section {
 
         this.accessTokenSave.onclick = () => {
             accessToken = this.accessTokenInput.value
+            if (accessToken == null) accessToken = ""
             getCoursesAsync()
             chrome.storage.local.set({accessToken: accessToken}, () => {
                 console.log("access token saved")
@@ -1295,6 +1296,7 @@ function getCoursesAsync() {
 
 chrome.storage.local.get(["accessToken", "types", "courseInfos"], (result) => {
     accessToken = result.accessToken
+    if (accessToken == null) accessToken = ""
 
     settingsSection.accessTokenInput.value = accessToken
     getCoursesAsync()
