@@ -78,71 +78,7 @@ function getData(specifications, accessToken) {
 }
 
 
-function getCourses(accessToken) {
-    let userId = getData(["users", "self"], accessToken)[0].id
-    
-    let courses = getData(["users", userId, "courses"], accessToken)
-    let currentDate = new Date(Date.now())
-    let currentSchoolYear
-    if (currentDate.getMonth() < 4) currentSchoolYear = currentDate.getFullYear()// 0 indexed
-    else currentSchoolYear = currentDate.getFullYear() + 1// 0 indexed
-    console.log(courses)
-    var currentCourses = []
-    for (let i = 0; i < courses.length; i++) {
-        if (courses[i].sis_course_id != null && courses[i].sis_course_id.indexOf(currentSchoolYear) == 0) {
-            currentCourses.push(courses[i])
-        }
-    }
 
-    return currentCourses
-}
-
-
-
-function getGradesForCourse(courseId, courseIndex, accessToken) {
-    if (accessToken == null) {
-        console.log("access token not entered")
-        return
-    }
-
-    getDataAsync(["courses", courseId, "sections", "?include[]=students"], accessToken).then((sections) => {
-        sendMessage({message: "doneWithSections", sections: sections, courseIndex: courseIndex})
-        console.log(sections)
-    })
-
-    getDataAsync(["courses", courseId, "assignments", "?include[]=all_dates"], accessToken).then((assignments) => {
-        sendMessage({message: "doneWithAssignments", assignments: assignments, courseIndex: courseIndex})
-        console.log(assignments)
-
-        console.log("loading grades")
-        var assignmentScores = []
-        for (let i = 0; i < assignments.length; i++) {
-            window.setTimeout(() => {
-                getDataAsync(["courses", courseId, "assignments", assignments[i].id, "submissions"], accessToken).then((scores) => {
-                    assignmentScores[i] = scores
-    
-                    let doneLoadingGrades = true
-                    for (let j = 0; j < assignments.length; j++) if (assignmentScores[j] == null) doneLoadingGrades = false
-                    if (doneLoadingGrades) {
-                        sendMessage({message: "doneWithGrades", grades: assignmentScores, courseIndex: courseIndex})
-                    
-                        console.log(assignmentScores)
-                    }
-                })
-            }, i * 150)
-        }
-        
-    })
-
-    getDataAsync(["courses", courseId, "assignment_groups"], accessToken).then((assignmentGroups) => {
-        sendMessage({message: "doneWithGroups", assignmentGroups: assignmentGroups, courseIndex: courseIndex})
-        console.log(assignmentGroups)
-    })
-
-
-
-
-}
 
 
 
@@ -196,11 +132,6 @@ async function getDataAsync(specifications, accessToken) {
     return returnJSON
     
 }
-
-
-
-// CANVAS UI //
-
 
 
 
@@ -391,7 +322,7 @@ class Loading {
     }
 
     refresh(object) {
-        object.angle += .05
+        object.angle += .075
         object.image.style.transform = "rotate(" + object.angle + "rad)"
     }
 
@@ -486,112 +417,6 @@ class HomeSection extends Section {
         this.sideBarLink = new SectionLink("Home", this)
 
 
-        let accessTokenLabel = document.createElement("span")
-        accessTokenLabel.innerHTML = "<br>Access Token (optional): "
-        this.wrapper.appendChild(accessTokenLabel)
-
-        this.accessTokenInput = document.createElement("input")
-        this.accessTokenInput.type = "text"
-        this.accessTokenInput.name = "accessTokenInput"
-        this.accessTokenInput.value = accessToken
-        
-        this.wrapper.appendChild(this.accessTokenInput)
-
-
-        this.accessTokenSave = document.createElement("button")
-        this.accessTokenSave.classList.add("Button", "Button-primary")
-        this.accessTokenSave.style.marginLeft = "10px"
-        this.accessTokenSave.style.color = "white"
-        this.accessTokenSave.style.transition = "background-color .25s"
-        this.accessTokenSave.style.backgroundColor = "var(--ic-brand-button--primary-bgd)"
-        this.accessTokenSave.onmouseover = () => { this.accessTokenSave.style.backgroundColor = "var(--ic-brand-button--primary-bgd-darkened-5)" }
-        this.accessTokenSave.onmouseleave = () => { this.accessTokenSave.style.backgroundColor = "var(--ic-brand-button--primary-bgd)" }
-        this.accessTokenSave.style.border = "1px solid"
-        this.accessTokenSave.style.borderColor = "var(--ic-brand-button--primary-bgd-darkened-15)"
-        this.accessTokenSave.textContent = "Save"
-        this.wrapper.appendChild(this.accessTokenSave)
-
-        this.accessTokenSave.onclick = () => {
-            accessToken = this.accessTokenInput.value
-            getCoursesAsync()
-            chrome.storage.local.set({accessToken: accessToken}, () => {
-                console.log("access token saved")
-            })
-        }
-        
-
-        let sampleFileLabel = document.createElement("span")
-        sampleFileLabel.innerHTML = "<br>Upload New Synergy Sample File: "
-        this.wrapper.appendChild(sampleFileLabel)
-
-        this.massImportInput = document.createElement("input")
-        this.massImportInput.type = "file"
-        
-        this.wrapper.appendChild(this.massImportInput)
-        
-        this.massImportInput.onchange = (event) => {
-            let fileReader = new FileReader()
-            fileReader.readAsBinaryString(event.target.files[0])
-            fileReader.onload = () => {
-                let massImport = XLSX.read(fileReader.result, {type: "binary"})
-                let typeSheet = massImport.Sheets["Instructions"]
-                console.log(typeSheet)
-        
-                types = []
-                for (let row in typeSheet) if (row.indexOf("B") != -1) types.push(typeSheet[row].h)
-                types.splice(0, 3)
-        
-                chrome.storage.local.set({types: JSON.stringify(types)}, () => {
-                    console.log("types saved")
-                })
-            }
-        }
-
-        this.termSelectorLabel = document.createElement("span")
-        this.termSelectorLabel.innerHTML = "<br>Select Current Grading Period: "
-        this.wrapper.appendChild(this.termSelectorLabel)
-
-        this.termSelector = document.createElement("select")
-        this.termSelector.innerHTML = `
-            <option value = "1">Quarter 1</option>
-            <option value = "2">Quarter 2</option>
-            <option value = "3">Quarter 3</option>
-            <option value = "4">Quarter 4</option>`
-        chrome.storage.local.get(["currentTerm"], (result) => { this.termSelector.value = result.currentTerm })
-        this.wrapper.appendChild(this.termSelector)
-
-        this.setTermDates()
-        this.termSelector.onchange = () => {
-            if (this.termSelector.value == 1) {
-                termStartDate = yearStartDate
-                termEndDate = firstQuarterDate
-            }
-            if (this.termSelector.value == 2) {
-                termStartDate = yearStartDate
-                termEndDate = secondQuarterDate
-            }
-            if (this.termSelector.value == 3) {
-                termStartDate = secondQuarterDate
-                termEndDate = thirdQuarterDate
-            }
-            if (this.termSelector.value == 4) {
-                termStartDate = secondQuarterDate
-                termEndDate = fourthQuarterDate
-            }
-
-            chrome.storage.local.set({currentTerm: this.termSelector.value}).then(() => {
-                console.log("current term saved")
-            })
-        }
-        
-
-
-        this.fileLineBreak = document.createElement("br")
-        this.wrapper.appendChild(this.fileLineBreak)
-
-
-        // SET TERM DATES
-
 
         this.currentCourses = []
 
@@ -662,16 +487,185 @@ class HomeSection extends Section {
                     id: this.currentCourses[i].id
                 }))
                 
-                courseButton.style.backgroundColor = "var(--fOyUs-backgroundSuccess)"
-                courseButton.onmouseover = () => { courseButton.style.backgroundColor = "var(--ic-brand-button--primary-bgd-darkened-5)" }
-                courseButton.onmouseleave = () => { courseButton.style.backgroundColor = "var(--fOyUs-backgroundSuccess)" }
-                courseButton.style.borderColor = "var(--fOyUs-borderColorSuccess)"
+                courseButton.style.backgroundColor = "#0B874B"
+                courseButton.onmouseover = () => { courseButton.style.backgroundColor = "#0B874B" }
+                courseButton.onmouseleave = () => { courseButton.style.backgroundColor = "#0B874B" }
+                courseButton.style.borderColor = "#0B874B"
                 courseButton.textContent = "Added"
                 courseButton.disabled = true
             }
         }
 
     }
+
+
+}
+
+
+class SettingsSection extends Section {
+
+    constructor() {
+        super("Settings")
+        
+        this.sideBarLink = new SectionLink("Settings", this)
+        
+
+        let sampleFileLabel = document.createElement("span")
+        sampleFileLabel.innerHTML = "<br>Upload New Synergy Sample File: "
+        this.wrapper.appendChild(sampleFileLabel)
+
+        this.massImportInput = document.createElement("input")
+        this.massImportInput.type = "file"
+        
+        this.wrapper.appendChild(this.massImportInput)
+        
+        this.massImportInput.onchange = (event) => {
+            let fileReader = new FileReader()
+            fileReader.readAsBinaryString(event.target.files[0])
+            fileReader.onload = () => {
+                let massImport = XLSX.read(fileReader.result, {type: "binary"})
+                let typeSheet = massImport.Sheets["Instructions"]
+                console.log(typeSheet)
+        
+                types = []
+                for (let row in typeSheet) if (row.indexOf("B") != -1) types.push(typeSheet[row].h)
+                types.splice(0, 3)
+        
+                chrome.storage.local.set({types: JSON.stringify(types)}, () => {
+                    console.log("types saved")
+                })
+            }
+        }
+
+        this.termSelectorLabel = document.createElement("span")
+        this.termSelectorLabel.innerHTML = "<br>Select Current Grading Period: "
+        this.wrapper.appendChild(this.termSelectorLabel)
+
+        this.termSelector = document.createElement("select")
+        this.termSelector.innerHTML = `
+            <option value = "1">Quarter 1</option>
+            <option value = "2">Quarter 2</option>
+            <option value = "3">Quarter 3</option>
+            <option value = "4">Quarter 4</option>`
+        chrome.storage.local.get(["currentTerm"], (result) => { this.termSelector.value = result.currentTerm })
+        this.wrapper.appendChild(this.termSelector)
+
+        this.setTermDates()
+        this.termSelector.onchange = () => {
+            if (this.termSelector.value == 1) {
+                termStartDate = yearStartDate
+                termEndDate = firstQuarterDate
+            }
+            if (this.termSelector.value == 2) {
+                termStartDate = yearStartDate
+                termEndDate = secondQuarterDate
+            }
+            if (this.termSelector.value == 3) {
+                termStartDate = secondQuarterDate
+                termEndDate = thirdQuarterDate
+            }
+            if (this.termSelector.value == 4) {
+                termStartDate = secondQuarterDate
+                termEndDate = fourthQuarterDate
+            }
+
+            chrome.storage.local.set({currentTerm: this.termSelector.value}).then(() => {
+                console.log("current term saved")
+            })
+        }
+        
+
+        let accessTokenLabel = document.createElement("span")
+        accessTokenLabel.innerHTML = "<br>Access Token (optional): "
+        this.wrapper.appendChild(accessTokenLabel)
+
+        this.accessTokenInput = document.createElement("input")
+        this.accessTokenInput.type = "text"
+        this.accessTokenInput.name = "accessTokenInput"
+        this.accessTokenInput.value = accessToken
+        
+        this.wrapper.appendChild(this.accessTokenInput)
+
+
+        this.accessTokenSave = document.createElement("button")
+        this.accessTokenSave.classList.add("Button", "Button-primary")
+        this.accessTokenSave.style.marginLeft = "10px"
+        this.accessTokenSave.style.color = "white"
+        this.accessTokenSave.style.transition = "background-color .25s"
+        this.accessTokenSave.style.backgroundColor = "var(--ic-brand-button--primary-bgd)"
+        this.accessTokenSave.onmouseover = () => { this.accessTokenSave.style.backgroundColor = "var(--ic-brand-button--primary-bgd-darkened-5)" }
+        this.accessTokenSave.onmouseleave = () => { this.accessTokenSave.style.backgroundColor = "var(--ic-brand-button--primary-bgd)" }
+        this.accessTokenSave.style.border = "1px solid"
+        this.accessTokenSave.style.borderColor = "var(--ic-brand-button--primary-bgd-darkened-15)"
+        this.accessTokenSave.textContent = "Save"
+        this.wrapper.appendChild(this.accessTokenSave)
+
+        this.accessTokenSave.onclick = () => {
+            accessToken = this.accessTokenInput.value
+            getCoursesAsync()
+            chrome.storage.local.set({accessToken: accessToken}, () => {
+                console.log("access token saved")
+            })
+        }
+
+
+
+        this.fileLineBreak = document.createElement("br")
+        this.wrapper.appendChild(this.fileLineBreak)
+
+
+        
+        this.getRawDataLabel = document.createElement("h3")
+        this.getRawDataLabel.textContent = "Fetch Raw Data"
+        this.wrapper.appendChild(this.getRawDataLabel)
+
+
+        this.getRawDataInput = document.createElement("input")
+        this.getRawDataInput.type = "text"
+        this.wrapper.appendChild(this.getRawDataInput)
+
+        this.getButton = document.createElement("button")
+        this.getButton.classList.add("Button", "Button-primary")
+        this.getButton.style.marginLeft = "10px"
+        this.getButton.style.color = "white"
+        this.getButton.style.transition = "background-color .25s"
+        this.getButton.style.backgroundColor = "var(--ic-brand-button--primary-bgd)"
+        this.getButton.onmouseover = () => { this.getButton.style.backgroundColor = "var(--ic-brand-button--primary-bgd-darkened-5)" }
+        this.getButton.onmouseleave = () => { this.getButton.style.backgroundColor = "var(--ic-brand-button--primary-bgd)" }
+        this.getButton.style.border = "1px solid"
+        this.getButton.style.borderColor = "var(--ic-brand-button--primary-bgd-darkened-15)"
+        this.getButton.textContent = "GET"
+        this.wrapper.appendChild(this.getButton)
+
+        this.getLoading = new Loading(this.getButton)
+
+        this.rawDataText = document.createElement("code")
+        this.rawDataText.style.backgroundColor = "transparent"
+        this.rawDataText.style.borderStyle = "none"
+        this.rawDataText.style.color = "rgb(50, 0, 0)"
+        this.rawDataText.innerHTML = "<br>"
+        this.wrapper.appendChild(this.rawDataText)
+
+        this.getButton.onclick = async () => {
+            this.getLoading.startLoading()
+            try {
+                let data = await getDataAsync([this.getRawDataInput.value], accessToken)
+                let rawData = "<br>" + JSON.stringify(data, null, "\t")
+                for (let i = rawData.length - 1; i >= 0 ; i--) if (rawData[i] == "\n") rawData = rawData.slice(0, i) + "<br>" + rawData.slice(i)
+                for (let i = rawData.length - 1; i >= 0 ; i--) if (rawData[i] == "\t") rawData = rawData.slice(0, i) + "&emsp;" + rawData.slice(i)
+
+                this.rawDataText.innerHTML = rawData
+
+                this.getLoading.endAnimation(this.getLoading)
+            }
+            catch {
+                this.rawDataText.innerHTML = "<br>failed to retrieve :("
+
+                this.getLoading.endAnimation(this.getLoading)
+            }
+        }
+    }
+
 
     
     setTermDates() {
@@ -692,49 +686,9 @@ class HomeSection extends Section {
             termStartDate = secondQuarterDate
             termEndDate = fourthQuarterDate
         }
+
     }
-
-}
-
-
-class SettingsSection extends Section {
-
-    constructor() {
-        super("Settings")
-        
-        this.sideBarLink = new SectionLink("Settings", this)
-
-
-        this.getRawDataInput = document.createElement("input")
-        this.getRawDataInput.type = "text"
-        this.wrapper.appendChild(this.getRawDataInput)
-
-        this.getButton = document.createElement("button")
-        this.getButton.classList.add("Button", "Button-primary")
-        this.getButton.style.marginLeft = "10px"
-        this.getButton.style.color = "white"
-        this.getButton.style.transition = "background-color .25s"
-        this.getButton.style.backgroundColor = "var(--ic-brand-button--primary-bgd)"
-        this.getButton.onmouseover = () => { this.getButton.style.backgroundColor = "var(--ic-brand-button--primary-bgd-darkened-5)" }
-        this.getButton.onmouseleave = () => { this.getButton.style.backgroundColor = "var(--ic-brand-button--primary-bgd)" }
-        this.getButton.style.border = "1px solid"
-        this.getButton.style.borderColor = "var(--ic-brand-button--primary-bgd-darkened-15)"
-        this.getButton.textContent = "Save"
-        this.wrapper.appendChild(this.getButton)
-
-        this.rawDataText = document.createElement("span")
-        this.rawDataText.innerHTML = "<br>"
-        this.wrapper.appendChild(this.rawDataText)
-
-        this.getButton.onclick = () => {
-            getDataAsync([this.getRawDataInput.value], accessToken).then((data) => {
-                this.rawDataText.innerHTML = "<br>" + JSON.stringify(data, null, "<br>")
-            })
-        }
-    }
-
-
-
+    
 }
 
 
@@ -769,11 +723,11 @@ class CourseSection extends Section {
         this.removeButton.style.marginRight = "10px"
         this.removeButton.style.color = "white"
         this.removeButton.style.transition = "background-color .25s"
-        this.removeButton.style.backgroundColor = "var(--fOyUs-backgroundDanger)"
-        this.removeButton.onmouseover = () => { this.removeButton.style.backgroundColor = "var(--fOyUs-focusColorDanger)" }
-        this.removeButton.onmouseleave = () => { this.removeButton.style.backgroundColor = "var(--fOyUs-backgroundDanger)" }
+        this.removeButton.style.backgroundColor = "#E0061F"
+        this.removeButton.onmouseover = () => { this.removeButton.style.backgroundColor = "#E0061F" }
+        this.removeButton.onmouseleave = () => { this.removeButton.style.backgroundColor = "#E0061F" }
         this.removeButton.style.border = "1px solid"
-        this.removeButton.style.borderColor = "var(--fOyUs-borderColorDanger)"
+        this.removeButton.style.borderColor = "#E0061F"
         this.removeButton.textContent = "Remove This Course"
         this.removeButton.title = "remove this course from your canvas to synergy course list"
         this.wrapper.appendChild(this.removeButton)
@@ -1117,16 +1071,16 @@ class CourseSection extends Section {
         })
 
         getDataAsync(["courses", this.id, "assignments", "?include[]=all_dates"], accessToken).then((assignments) => {
+            console.log(assignments)
+            for (let i = assignments.length - 1; i >= 0; i--) if (!assignments[i].graded_submissions_exist) assignments.splice(i, 1)
             let optimizedAssignments = []
             for (let i = 0; i < assignments.length; i++) {
                 optimizedAssignments.push({
                     assignment_group_id: assignments[i].assignment_group_id,
-                    created_at: assignments[i].created_at,
-                    due_at: assignments[i].due_at,
+                    all_dates: assignments[i].all_dates,
                     name: assignments[i].name,
                     html_url: assignments[i].html_url,
-                    points_possible: assignments[i].points_possible,
-                    graded_submissions_exist: assignments[i].graded_submissions_exist
+                    points_possible: assignments[i].points_possible
                 })
             }
             this.assignments = optimizedAssignments
@@ -1195,6 +1149,8 @@ class CourseSection extends Section {
         // if any data is missing, return
         if (this.sections == null || this.sections == [] || this.assignments == null || this.assignments == [] || this.grades == null || this.grades == [] || this.assignmentGroups == null || this.assignmentGroups == []) return
 
+        console.log(termStartDate)
+        console.log(termEndDate)
 
         // turn imported data into a JSON
         let exportJSON = {}
@@ -1204,52 +1160,63 @@ class CourseSection extends Section {
             
             if (this.sections[i].students != null) for (let j = 0; j < this.sections[i].students.length; j++) {
                 let currentStudent = this.sections[i].students[j]
-                for (let k = 0; k < this.grades.length; k++) {
-                    if (this.assignments[k].graded_submissions_exist) {
-                        
-                        let currentAssignmentType
-                        for (let l = 0; l < this.assignmentGroups.length; l++) if (this.assignments[k].assignment_group_id == this.assignmentGroups[l].id) currentAssignmentType = this.typeSelections[this.assignmentGroups[l].name]
-                        let submissionFound = false
-                        let currentScore = null
-                        let currentExcused = false
-                        for (let l = 0; l < this.grades[k].length; l++) {
-                            if (this.grades[k][l].user_id == currentStudent.id) {
-                                submissionFound = true
-                                currentScore = this.grades[k][l].score
-                                currentExcused = this.grades[k][l].excused
-                            }
+                for (let k = 0; k < this.grades.length; k++) if (this.assignments[k] != null) {
+                    let currentAssignmentType
+                    for (let l = 0; l < this.assignmentGroups.length; l++) if (this.assignments[k].assignment_group_id == this.assignmentGroups[l].id) currentAssignmentType = this.typeSelections[this.assignmentGroups[l].name]
+                    let submissionFound = false
+                    let currentScore = null
+                    let currentExcused = false
+                    for (let l = 0; l < this.grades[k].length; l++) {
+                        if (this.grades[k][l].user_id == currentStudent.id) {
+                            submissionFound = true
+                            currentScore = this.grades[k][l].score
+                            currentExcused = this.grades[k][l].excused
                         }
-                        if (currentExcused == true) currentExcused = "True"
-                        else currentExcused = "False"
-                        let assignmentDate = new Date(this.assignments[k].created_at)
-                        let dueDate = new Date(this.assignments[k].due_at)
-
-                        if (this.assignments[k].created_at == null) assignmentDate = termEndDate
-                        else if (assignmentDate.getTime() < termStartDate.getTime()) assignmentDate = termStartDate
-                        else if (assignmentDate.getTime() > termEndDate.getTime()) assignmentDate = termEndDate
-
-                        if (this.assignments[k].due_at == null) dueDate = termEndDate
-                        else if (dueDate.getTime() < termStartDate.getTime()) dueDate = termStartDate
-                        else if (dueDate.getTime() > termEndDate.getTime()) dueDate = termEndDate
-
-                        // add object to exportJSON containing grade on current assignment for current student
-                        if (submissionFound) exportJSON[currentSection].push({
-                            "STUDENT_PERM_ID": currentStudent.sis_user_id,
-                            "STUDENT_LAST_NAME": currentStudent.sortable_name.slice(0, currentStudent.sortable_name.indexOf(", ")),
-                            "STUDENT_FIRST_NAME": currentStudent.sortable_name.slice(currentStudent.sortable_name.indexOf(", ") + 2),
-                            "OVERALL_SCORE": (currentScore != null) ? currentScore : "",
-                            "ASSIGNMENT_NAME": this.assignments[k].name,
-                            "ASSIGNMENT_DESCRIPTION": "Canvas URL: " + this.assignments[k].html_url,
-                            "MAX_SCORE": this.assignments[k].points_possible,
-                            "POINTS": this.assignments[k].points_possible,
-                            "ASSIGNMENT_DATE": assignmentDate.toLocaleDateString(),
-                            "DUE_DATE": dueDate.toLocaleDateString(),
-                            "SCORE_TYPE": "Raw Score",
-                            "ASSIGNMENT_TYPE": currentAssignmentType,
-                            "EXCUSED": currentExcused,
-                            "SHOW_ONLY_WHEN_SCORED": this.sows
-                        })
                     }
+                    if (currentExcused == true) currentExcused = "True"
+                    else currentExcused = "False"
+
+                    let currentDate = this.assignments[k].all_dates[0]
+                    for (let l = 0; l < this.assignments[k].all_dates.length; l++) {
+                        if (this.assignments[k].all_dates[l].title == currentSection) {
+                            currentDate = this.assignments[k].all_dates[l]
+                        }
+                    }
+
+                    let assignmentDate = new Date(this.assignments[k].created_at)
+                    assignmentDate.setTime(assignmentDate.getTime() + 86400000)
+                    let dueDate = new Date(currentDate.due_at)
+                    dueDate.setTime(dueDate.getTime() + 86400000)
+
+                    if (assignmentDate.getTime() < termStartDate.getTime()) assignmentDate = termStartDate
+                    else if (assignmentDate.getTime() > termEndDate.getTime()) assignmentDate = termEndDate
+
+                    if (dueDate.getTime() < termStartDate.getTime()) {
+                        console.log("too early" + dueDate)
+                        dueDate = termStartDate
+                    }
+                    else if (dueDate.getTime() > termEndDate.getTime()) {
+                        console.log("too late" + dueDate)
+                        dueDate = termEndDate
+                    }
+
+                    // add object to exportJSON containing grade on current assignment for current student
+                    if (submissionFound) exportJSON[currentSection].push({
+                        "STUDENT_PERM_ID": currentStudent.sis_user_id,
+                        "STUDENT_LAST_NAME": currentStudent.sortable_name.slice(0, currentStudent.sortable_name.indexOf(", ")),
+                        "STUDENT_FIRST_NAME": currentStudent.sortable_name.slice(currentStudent.sortable_name.indexOf(", ") + 2),
+                        "OVERALL_SCORE": (currentScore != null) ? currentScore : "",
+                        "ASSIGNMENT_NAME": this.assignments[k].name,
+                        "ASSIGNMENT_DESCRIPTION": "Canvas URL: " + this.assignments[k].html_url,
+                        "MAX_SCORE": this.assignments[k].points_possible,
+                        "POINTS": this.assignments[k].points_possible,
+                        "ASSIGNMENT_DATE": assignmentDate.toLocaleDateString(),
+                        "DUE_DATE": dueDate.toLocaleDateString(),
+                        "SCORE_TYPE": "Raw Score",
+                        "ASSIGNMENT_TYPE": currentAssignmentType,
+                        "EXCUSED": currentExcused,
+                        "SHOW_ONLY_WHEN_SCORED": this.sows
+                    })
                 }
             }
         }
@@ -1300,10 +1267,8 @@ homeSection.sideBarLink.link.click()
 var courseSections = []
 
 function getCoursesAsync() {
-
-    getDataAsync(["users", "self"], accessToken).then((users) => {
         
-        getDataAsync(["users", users[0].id, "courses"], accessToken).then((courses) => {
+        getDataAsync(["users", "self", "courses"], accessToken).then((courses) => {
             let currentDate = new Date(Date.now())
             let currentSchoolYear
             if (currentDate.getMonth() < 4) currentSchoolYear = currentDate.getFullYear()// 0 indexed
@@ -1320,7 +1285,6 @@ function getCoursesAsync() {
             homeSection.populateCurrentCourses(currentCourses)
 
         })
-    })
 
 }
 
@@ -1330,7 +1294,7 @@ function getCoursesAsync() {
 chrome.storage.local.get(["accessToken", "types", "courseInfos"], (result) => {
     accessToken = result.accessToken
 
-    homeSection.accessTokenInput.value = accessToken
+    settingsSection.accessTokenInput.value = accessToken
     getCoursesAsync()
 
     types = (result.types != null) ? JSON.parse(result.types) : null
