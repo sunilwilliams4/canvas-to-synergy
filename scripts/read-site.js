@@ -138,11 +138,14 @@ async function getDataAsync(specifications, accessToken) {
 
 // UI INTEGRATION //
 
+
+var canvasMenu = document.getElementById("menu")
+
+if (canvasMenu != null) {
+
 var accessToken
 var types = []
 
-
-var canvasMenu = document.getElementById("menu")
 var canvasWrapper = document.getElementById("wrapper")
 
 var interfaceButton = document.createElement("button")
@@ -953,6 +956,7 @@ class CourseSection extends Section {
 
             downloadFileButton.onclick = () => { // download synergy import file (a .xls file with grades for this section)
                 this.convertGrades()
+                saveCourses()
                 console.log(this.sections[i].name)
                 console.log(this.convertedGrades[this.sections[i].name])
 
@@ -1078,6 +1082,7 @@ class CourseSection extends Section {
                 optimizedAssignments.push({
                     assignment_group_id: assignments[i].assignment_group_id,
                     all_dates: assignments[i].all_dates,
+                    created_at: assignments[i].created_at,
                     name: assignments[i].name,
                     html_url: assignments[i].html_url,
                     points_possible: assignments[i].points_possible
@@ -1149,9 +1154,8 @@ class CourseSection extends Section {
         // if any data is missing, return
         if (this.sections == null || this.sections == [] || this.assignments == null || this.assignments == [] || this.grades == null || this.grades == [] || this.assignmentGroups == null || this.assignmentGroups == []) return
 
-        console.log(termStartDate)
-        console.log(termEndDate)
 
+        
         // turn imported data into a JSON
         let exportJSON = {}
         for (let i = 0; i < this.sections.length; i++) {
@@ -1192,11 +1196,9 @@ class CourseSection extends Section {
                     else if (assignmentDate.getTime() > termEndDate.getTime()) assignmentDate = termEndDate
 
                     if (dueDate.getTime() < termStartDate.getTime()) {
-                        console.log("too early" + dueDate)
                         dueDate = termStartDate
                     }
                     else if (dueDate.getTime() > termEndDate.getTime()) {
-                        console.log("too late" + dueDate)
                         dueDate = termEndDate
                     }
 
@@ -1308,5 +1310,5 @@ chrome.storage.local.get(["accessToken", "types", "courseInfos"], (result) => {
     }
 })
 
-
+}
 
