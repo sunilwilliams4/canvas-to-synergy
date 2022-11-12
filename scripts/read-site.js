@@ -712,8 +712,8 @@ class HelpSection extends Section {
         <br> - Wait until loading has finished before moving on to downloading Synergy import files
         <br>
         <br><i style = "color: green;"><b>Configuring Export Settings</b></i><i style = "color: gray"> (for each course)</i>
-        <br> - Select the Synergy assignment types from the dropdowns that match the Canvas assignment groups on the right (for assignment weighting)
-        <br> - If you'd like ungraded submissions to be hidden, chech the <b>Show Only When Scored</b> checkbox
+        <br> - Select the Synergy assignment types from the dropdowns that match the Canvas assignment groups on the left (for assignment weighting)
+        <br> - If you'd like ungraded submissions to be hidden in Synergy, check the <b>Show Only When Scored</b> checkbox
         <br> - Save changes by clicking the <b>Save Changes</b> button
         <br>
         <br><i style = "color: green;"><b>Downloading Synergy Import Files</b></i><i style = "color: gray"> (for each course section)</i>
