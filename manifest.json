@@ -5,14 +5,10 @@
     "description": "Download and convert your Canvas grades into Synergy import files.",
   
     "permissions": [
-      "tabs",
       "storage",
-      "storage"
+      "unlimitedStorage"
     ],
 
-    "action": {
-      "default_popup": "hello.html"
-    },
     "icons": {
       "16": "images/logo16.png",
       "48": "images/logo48.png",
@@ -26,14 +22,6 @@
         ],
         "matches": [
           "https://lms.pps.net/*"
-        ]
-      },
-      {
-        "js": [
-          "scripts/synergy.js"
-        ],
-        "matches": [
-          "file:///Users/sunil/Downloads/Synergy%20SIS%20(1).mhtml"
         ]
       }
     ]

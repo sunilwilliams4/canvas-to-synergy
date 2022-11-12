@@ -152,6 +152,8 @@ var interfaceButton = document.createElement("button")
 interfaceButton.style.width = "100%"
 interfaceButton.style.height = "65px"
 interfaceButton.style.backgroundColor = "transparent"
+interfaceButton.onmouseover = () => { interfaceButton.style.backgroundColor = "rgba(0,0,0,.2)" }
+interfaceButton.onmouseleave = () => { interfaceButton.style.backgroundColor = "transparent" }
 interfaceButton.style.borderStyle = "none"
 interfaceButton.style.transition = "background-color .5s"
 var interfaceLogo = document.createElement("img")
@@ -174,12 +176,19 @@ canvasWrapper.appendChild(mainWrapper)
 
 
 
+window.onresize = () => {
+    mainWrapper.style.left = canvasMenu.offsetWidth + "px"
+    mainWrapper.style.backgroundColor = "white"
+    mainWrapper.style.width = "calc(100% - " + canvasMenu.offsetWidth + "px)"
+    mainWrapper.style.height = window.innerHeight + "px"
+}
+
+
 
 
 canvasMenu.onclick = (event) => {
     let clickedOnInterfaceButton = false
-    for (let i = 0; i < event.path.length; i++) if (event.path[i] == interfaceButton) clickedOnInterfaceButton = true
-    console.log(clickedOnInterfaceButton)
+    for (let i = 0; i < event.composedPath().length; i++) if (event.composedPath()[i] == interfaceButton) clickedOnInterfaceButton = true
     if (clickedOnInterfaceButton) {
         mainWrapper.style.display = ""
         document.getElementById("not_right_side").style.display = "none"
@@ -194,19 +203,21 @@ canvasMenu.onclick = (event) => {
         for (let i = 0; i < otherButtons.length; i++) otherButtons[i].style.backgroundColor = "transparent"
 
         interfaceButton.style.backgroundColor = "#fff"
+        interfaceButton.onmouseover = () => { }
+        interfaceButton.onmouseleave = () => { }
     }
     else {
         interfaceButton.style.backgroundColor = "transparent"
-        for (let i = 0; i < event.path.length; i++) {
-            if (event.path[i].classList != null && event.path[i].classList.contains("ic-icon-svg")) event.path[i].style.fill = "var(--ic-brand-global-nav-ic-icon-svg-fill--active)"
-            if (event.path[i].classList != null && event.path[i].classList.contains("menu-item__text")) event.path[i].style.color = "var(--ic-brand-global-nav-ic-icon-svg-fill--active)"
-            if (event.path[i].classList != null && event.path[i].classList.contains("ic-app-header__menu-list-link")) event.path[i].style.backgroundColor = "#fff"
+        for (let i = 0; i < event.composedPath().length; i++) {
+            if (event.composedPath()[i].classList != null && event.composedPath()[i].classList.contains("ic-icon-svg")) event.composedPath()[i].style.fill = "var(--ic-brand-global-nav-ic-icon-svg-fill--active)"
+            if (event.composedPath()[i].classList != null && event.composedPath()[i].classList.contains("menu-item__text")) event.composedPath()[i].style.color = "var(--ic-brand-global-nav-ic-icon-svg-fill--active)"
+            if (event.composedPath()[i].classList != null && event.composedPath()[i].classList.contains("ic-app-header__menu-list-link")) event.composedPath()[i].style.backgroundColor = "#fff"
         }
     }
 }
 
 document.onclick = (event) => {
-    if (mainWrapper.style.display == "" && event.path.find(element => element == canvasMenu) == null) {
+    if (mainWrapper.style.display == "" && event.composedPath().find(element => element == canvasMenu) == null) {
         let otherIcons = document.getElementsByClassName("ic-icon-svg")
         for (let i = 0; i < otherIcons.length; i++) otherIcons[i].style.fill = "#fff"
         
@@ -258,7 +269,7 @@ sideBarWrapper.classList.add("list-view")
 sideBarWrapper.style.position = "absolute"
 sideBarWrapper.style.width = "192px"
 sideBarWrapper.style.left = "0px"
-sideBarWrapper.style.top = "105px"
+sideBarWrapper.style.top = "100px"
 sideBarWrapper.style.overflowY = "hidden"
 sideBarWrapper.style.zIndex = "100"
 sideBarWrapper.style.display = "block"
@@ -307,12 +318,12 @@ class SectionLink {
 
 
 class Loading {
-    constructor(parent) {
+    constructor(size, parent) {
         this.image = document.createElement("img")
         this.image.src = "https://i.imgur.com/XgIwQf9.png"
         this.image.classList.add("loadingImage")
-        this.image.style.width = "20px"
-        this.image.style.height = "20px"
+        this.image.style.width = size + "px"
+        this.image.style.height = size + "px"
         this.image.style.marginLeft = "10px"
         parent.appendChild(this.image)
 
@@ -347,10 +358,10 @@ class Section {
         //this.wrapper.classList.add("ic-app-main-content")
         this.wrapper.style.backgroundColor = "white"
         this.wrapper.style.position = "absolute"
-        this.wrapper.style.top = "75px"
+        this.wrapper.style.top = "72px"
         this.wrapper.style.left = "225px"
         this.wrapper.style.width = "calc(100% - 225px)"
-        this.wrapper.style.height = "calc(100% - 75px)"
+        this.wrapper.style.height = "calc(100% - 72px)"
         this.wrapper.style.overflowY = "auto"
         this.wrapper.style.display = "none"
         mainWrapper.appendChild(this.wrapper)
@@ -417,22 +428,7 @@ class HomeSection extends Section {
 
         this.setTermDates()
         this.termSelector.onchange = () => {
-            if (this.termSelector.value == 1) {
-                termStartDate = yearStartDate
-                termEndDate = firstQuarterDate
-            }
-            if (this.termSelector.value == 2) {
-                termStartDate = yearStartDate
-                termEndDate = secondQuarterDate
-            }
-            if (this.termSelector.value == 3) {
-                termStartDate = secondQuarterDate
-                termEndDate = thirdQuarterDate
-            }
-            if (this.termSelector.value == 4) {
-                termStartDate = secondQuarterDate
-                termEndDate = fourthQuarterDate
-            }
+            this.setTermDates()
 
             chrome.storage.local.set({currentTerm: this.termSelector.value}).then(() => {
                 console.log("current term saved")
@@ -441,6 +437,9 @@ class HomeSection extends Section {
         
         this.termSelectorLineBreak = document.createElement("br")
         this.wrapper.appendChild(this.termSelectorLineBreak)
+
+        this.coursesLoading = new Loading(35, this.wrapper)
+        this.coursesLoading.startLoading()
 
 
         this.currentCourses = []
@@ -454,6 +453,8 @@ class HomeSection extends Section {
 
         for (let i = 0; i < this.addCourseLabels.length; i++) this.addCourseLabels[i].remove()
         for (let i = 0; i < this.addCourseButtons.length; i++) this.addCourseButtons[i].remove()
+
+        if (this.coursesLoading.image != null) this.coursesLoading.image.remove()
 
         this.currentCourses = currentCourses
 
@@ -502,7 +503,7 @@ class HomeSection extends Section {
             this.addCourseButtons.push(courseButton)
 
             let courseLabel = document.createElement("span")
-            courseLabel.innerHTML = this.currentCourses[i].name + " (" + this.currentCourses[i].id + ")" + extraInfo + "<br>"
+            courseLabel.innerHTML = `<a href = "https://lms.pps.net/courses/` + this.currentCourses[i].id + `" target = "_blank">` + this.currentCourses[i].name + "</a> (" + this.currentCourses[i].id + ")" + extraInfo + "<br>"
             this.wrapper.appendChild(courseLabel)
             this.addCourseLabels.push(courseLabel)
 
@@ -646,7 +647,7 @@ class SettingsSection extends Section {
         this.getButton.textContent = "GET"
         this.wrapper.appendChild(this.getButton)
 
-        this.getLoading = new Loading(this.getButton)
+        this.getLoading = new Loading(27.5, this.wrapper)
 
         this.rawDataText = document.createElement("code")
         this.rawDataText.style.backgroundColor = "transparent"
@@ -675,28 +676,6 @@ class SettingsSection extends Section {
         }
     }
 
-
-    
-    setTermDates() {
-        
-        if (this.termSelector.value == 1) {
-            termStartDate = yearStartDate
-            termEndDate = firstQuarterDate
-        }
-        if (this.termSelector.value == 2) {
-            termStartDate = yearStartDate
-            termEndDate = secondQuarterDate
-        }
-        if (this.termSelector.value == 3) {
-            termStartDate = secondQuarterDate
-            termEndDate = thirdQuarterDate
-        }
-        if (this.termSelector.value == 4) {
-            termStartDate = secondQuarterDate
-            termEndDate = fourthQuarterDate
-        }
-
-    }
     
 }
 
@@ -713,27 +692,49 @@ class HelpSection extends Section {
         <br><i style = "color: green;"><b>On First Time Use</b></i>
         <br> - Go to <b>Import Assignments</b> under the <b>Grade Book</b> dropdown menu in Synergy
         <br> - Click on the <b>Download Sample File</b> button
+        <br> - Upload this file to Canvas To Synergy in the <b>Settings</b> page
         <br>
-        <br><i style = "color: green;"><b>On Everyday Use</b></i>
+        <br><i style = "color: green;"><b>On Everyday Use</b></i><i style = "color: gray"> (steps elaborated upon further down)</i>
         <br> - In the Canvas To Synergy <b>Home</b> page select the grading period you would like to import grades for
         <br> - Refresh Grades for your courses
         <br> - Download Synergy import files
         <br> - Upload files to Synergy
         <br>
-        <br><i style = "color: green;"><b>Adding Classes</b></i>
-        <br> - In the Canvas To Synergy home page click <b>+ Add</b> for courses that you would like to import grades for
+        <br><i style = "color: green;"><b>Adding Courses</b></i>
+        <br> - In the Canvas To Synergy <b>Home</b> page, click <b>+ Add</b> next to courses that you would like to use with Canvas To Synergy
         <br>
-        <br><i style = "color: green;"><b>Removing Classes</b></i>
-        <br> - In a Canvas To Synergy course page click <b>Remove This Course</b>
-        <br> - <i style = "color: darkgray">This only affects your Canvas To Synergy preferences, Canvas To Synergy cannot delete your actual courses</i>
+        <br><i style = "color: green;"><b>Removing Courses</b></i>
+        <br> - In a Canvas To Synergy course page, click <b>Remove This Course</b>
+        <br><i style = "color: gray">&emsp; - This only affects your Canvas To Synergy preferences, Canvas To Synergy cannot delete your actual courses</i>
         <br>
-        <br><i style = "color: green;"><b>Loading Grades</b></i>
-        <br> - In a Canvas To Synergy course page click <b>Refresh Grades For This Class</b>
-        <br> - Wait until loading animation has finished before moving on to downloading
+        <br><i style = "color: green;"><b>Loading Grades</b></i><i style = "color: gray"> (for each course)</i>
+        <br> - In a Canvas To Synergy course page, click <b>Refresh Grades For This Course</b>
+        <br> - Wait until loading has finished before moving on to downloading Synergy import files
         <br>
-        <br><i style = "color: green;"><b>Downloading Synergy Import Files</b></i>
-        <br> - In a Canvas To Synergy <b>Course/<b> page click <b>Refresh Grades For This Class</b>
-        <br> - Wait until loading animation has finished before moving on to downloading
+        <br><i style = "color: green;"><b>Configuring Export Settings</b></i><i style = "color: gray"> (for each course)</i>
+        <br> - Select the Synergy assignment types from the dropdowns that match the Canvas assignment groups on the right (for assignment weighting)
+        <br> - If you'd like ungraded submissions to be hidden, chech the <b>Show Only When Scored</b> checkbox
+        <br> - Save changes by clicking the <b>Save Changes</b> button
+        <br>
+        <br><i style = "color: green;"><b>Downloading Synergy Import Files</b></i><i style = "color: gray"> (for each course section)</i>
+        <br> - In a Canvas To Synergy course page, click on the <b>Download</b> button corresponding with the section you would like to download grades for
+        <br>
+        <br><i style = "color: green;"><b>Importing grades to Synergy</b></i><i style = "color: gray"> (for each course section)</i>
+        <br> - Go to <b>Import Assignments</b> under the <b>Grade Book</b> dropdown menu in Synergy
+        <br> - Make sure you are in the desired course section
+        <br> - Turn on the first and third settings
+        <br> - Select or drag and drop the corresponding Canvas To Synergy download file into the file selector
+        <br> - If errors appear, consult the <i style = "color: darkred;">Possible Causes For Error</i> section below
+        <br> - Review the uploaded grades if you'd like to, and click <b>Import Data</b>
+        <br> - Check gradebook to make sure grades were imported correctly
+        <br>
+        <br><i style = "color: darkred;"><b>Possible Causes For Error</b></i><i style = "color: gray"> (errors are common -- no need to worry)</i>
+        <br> - Make sure you are uploading to the correct course and period number that corresponds with the Canvas To Synergy download file name
+        <br> - Make sure there are no extra students in your Canvas course section that are absent from your Synergy course
+        <br>&emsp; - If this is the case, try turning on <b>Show Only When Scored</b> in the Canvas To Synergy course page, re-download the file, and try again
+        <br> - <span style = "color: darkred;">If the solutions above don't work:</span>
+        <br>&emsp; - Turn on the fourth setting in <b>Import Assignments</b> to show detailed error messages and try to manually find the problem
+        <br>&emsp; - Email nfenger@pps.net or sunil.williams.4@gmail.com with your error message
         <br>
         <br>
         <br>
@@ -811,28 +812,43 @@ class CourseSection extends Section {
         this.refreshGradesButton.textContent = "Refresh Grades For This Course"
         this.wrapper.appendChild(this.refreshGradesButton)
 
-        this.loading = new Loading(this.refreshGradesButton)
+        this.loading = new Loading(27.5, this.wrapper)
 
         this.refreshGradesButton.onclick = () => {
+            this.refreshGradesButton.disabled = true
+
             this.fetchGrades()
 
             this.loading.startLoading()
         }
 
 
+        this.exportSettingsTitle = document.createElement("h3")
+        this.exportSettingsTitle.style.marginTop = "20px"
+        this.exportSettingsTitle.style.marginRight = "20px"
+        this.exportSettingsTitle.style.paddingBottom = "10px"
+        this.exportSettingsTitle.style.borderBottomStyle = "dashed"
+        this.exportSettingsTitle.style.borderColor = "gray"
+        this.exportSettingsTitle.textContent = "Export Settings"
+        this.wrapper.appendChild(this.exportSettingsTitle)
+
+
+
         this.typeSelectorWrapper = document.createElement("div")
         this.typeSelectorWrapper.style = `
-            margin: 10px;
-            width: calc(100% - 100px);`
+            margin-top: 15px;
+            width: 520px;`
         this.wrapper.appendChild(this.typeSelectorWrapper)
 
-        this.groupsTitle = document.createElement("span")
+        this.groupsTitle = document.createElement("i")
         this.groupsTitle.style.float = "left"
+        this.groupsTitle.style.color = "gray"
         this.groupsTitle.textContent = "Assignment Group (Canvas)"
         this.typeSelectorWrapper.appendChild(this.groupsTitle)
 
-        this.typesTitle = document.createElement("span")
+        this.typesTitle = document.createElement("i")
         this.typesTitle.style.float = "right"
+        this.typesTitle.style.color = "gray"
         this.typesTitle.textContent = "Assignment Type (Synergy)"
         this.typeSelectorWrapper.appendChild(this.typesTitle)
 
@@ -847,11 +863,14 @@ class CourseSection extends Section {
         this.saveChangesButton
         this.lastSaveDateLabel
 
+        this.downloadTitle
+
         this.downloadFileButtonBreaks = []
         this.downloadFileButtons = []
 
         this.gradesPreviewTitle
         this.gradesPreviewSectionTitles = []
+        this.gradesPreviewTableWrappers = []
         this.gradesPreviewTables = []
 
         this.makeTypeMatchers()
@@ -863,13 +882,14 @@ class CourseSection extends Section {
     makeTypeMatchers() {
         if (this.gradesPreviewTitle != null) this.gradesPreviewTitle.remove()
         if (this.gradesPreviewSectionTitles[0] != null) for (let i = 0; i < this.gradesPreviewSectionTitles.length; i++) this.gradesPreviewSectionTitles[i].remove()
-        if (this.gradesPreviewTables[0] != null) for (let i = 0; i < this.gradesPreviewTables.length; i++) this.gradesPreviewTables[i].remove()
+        if (this.gradesPreviewTableWrappers[0] != null) for (let i = 0; i < this.gradesPreviewTableWrappers.length; i++) this.gradesPreviewTableWrappers[i].remove()
         if (this.downloadFileButtonBreaks[0] != null) for (let i = 0; i < this.downloadFileButtonBreaks.length; i++) this.downloadFileButtonBreaks[i].remove()
         if (this.downloadFileButtons[0] != null) for (let i = 0; i < this.downloadFileButtons.length; i++) this.downloadFileButtons[i].remove()
         if (this.saveChangesButton != null) this.saveChangesButton.remove()
         if (this.lastSaveDateLabel != null) this.lastSaveDateLabel.remove()
         if (this.sowsCheckbox != null) this.sowsCheckbox.remove()
         if (this.sowsLabel != null) this.sowsLabel.remove()
+        if (this.downloadTitle != null) this.downloadTitle.remove()
 
         for (let i = 0; i < this.typeMatchers.length; i++) this.typeMatchers[i].remove()
         this.typeMatchers = []
@@ -879,13 +899,12 @@ class CourseSection extends Section {
         for (let i = 0; i < this.assignmentGroups.length; i++) {
 
             let typeMatcher = document.createElement("div")
-
-            typeMatcher.innerHTML = "<br>"
             
             typeMatcher.style = `
-                padding: 0px;
-                border-top-style: solid;
-                border-color: lightgray`
+                margin-top: 10px;
+                padding-top: 10px;
+                border-top-style: dotted;
+                border-color: darkgray;`
             this.typeSelectorWrapper.appendChild(typeMatcher)
             this.typeMatchers.push(typeMatcher)
 
@@ -895,14 +914,6 @@ class CourseSection extends Section {
             typeMatcher.appendChild(typeDropdownWrapper)
 
             let typeDropdown = document.createElement("select")
-            typeDropdown.style = `
-                padding: 10px;
-                width: 200px;
-                border-radius: 3px;
-                color: white;
-                background-color: green;
-                cursor: pointer;
-                transition: background-color .25s;`
             typeDropdown.title = "Select the appropriate Synergy assignment type for the assignment group to the left"
             typeDropdownWrapper.appendChild(typeDropdown)
 
@@ -921,11 +932,11 @@ class CourseSection extends Section {
 
             let groupLabel = document.createElement("div")
             groupLabel.style = `
-                padding: 10px;
-                border-radius: 3px;
+                padding: 7.5px 7.5px 7.5px 10px;
+                width: 200px;
+                background-color: green;
                 color: white;
-                width: 175px;
-                background-color: var(--ic-brand-primary);`
+                border-radius: 3px;`
             groupLabel.textContent = this.assignmentGroups[i].name
             let groupLabelTitle = ""
             for (let j = 0; j < this.assignments.length; j++) if (this.assignments[j].assignment_group_id == this.assignmentGroups[i].id) groupLabelTitle += this.assignments[j].name + ", "
@@ -941,12 +952,13 @@ class CourseSection extends Section {
 
         let sowsCheckbox = document.createElement("input")
         sowsCheckbox.type = "checkbox"
-        sowsCheckbox.style.margin = "10px"
+        sowsCheckbox.style.margin = "20px 15px 20px 10px"
         sowsCheckbox.checked = this.sows
         this.wrapper.appendChild(sowsCheckbox)
         this.sowsCheckbox = sowsCheckbox
 
         let sowsLabel = document.createElement("span")
+        sowsLabel.style.height = "20px"
         sowsLabel.innerHTML = "Show Only When Scored<br><br>"
         this.wrapper.appendChild(sowsLabel)
         this.sowsLabel = sowsLabel
@@ -971,8 +983,8 @@ class CourseSection extends Section {
         this.wrapper.appendChild(saveChangesButton)
         this.saveChangesButton = saveChangesButton
 
-        let lastSaveDateLabel = document.createElement("span")
-        lastSaveDateLabel.style.color = "var(--Vmatu-toggleBackgroundWarning)"
+        let lastSaveDateLabel = document.createElement("i")
+        lastSaveDateLabel.style.paddingLeft = "5px"
         lastSaveDateLabel.textContent = this.lastSaveDate
         this.wrapper.appendChild(lastSaveDateLabel)
         this.lastSaveDateLabel = lastSaveDateLabel
@@ -986,12 +998,16 @@ class CourseSection extends Section {
         this.convertGrades()
 
 
+        this.downloadTitle = document.createElement("h3")
+        this.downloadTitle.style.marginTop = "20px"
+        this.downloadTitle.style.marginRight = "20px"
+        this.downloadTitle.style.paddingBottom = "10px"
+        this.downloadTitle.style.borderBottomStyle = "dashed"
+        this.downloadTitle.style.borderColor = "gray"
+        this.downloadTitle.textContent = "Download Exports"
+        this.wrapper.appendChild(this.downloadTitle)
 
         for (let i = 0; i < this.sections.length; i++) { // create a button for each canvas course section
-
-            let lineBreak = document.createElement("br")
-            this.wrapper.appendChild(lineBreak)
-            this.downloadFileButtonBreaks.push(lineBreak)
 
             let downloadFileButton = document.createElement("button")
             downloadFileButton.classList.add("Button", "Button-primary")
@@ -1007,6 +1023,10 @@ class CourseSection extends Section {
             downloadFileButton.title = "Download Synergy import file"
             this.wrapper.appendChild(downloadFileButton)
             this.downloadFileButtons.push(downloadFileButton)
+
+            let lineBreak = document.createElement("br")
+            this.wrapper.appendChild(lineBreak)
+            this.downloadFileButtonBreaks.push(lineBreak)
 
             downloadFileButton.onclick = () => { // download synergy import file (a .xls file with grades for this section)
                 this.convertGrades()
@@ -1049,20 +1069,32 @@ class CourseSection extends Section {
         }
 
 
-        let previewTitle = document.createElement("h2")
-        previewTitle.textContent = "Preview Exports"
-        this.wrapper.appendChild(previewTitle)
-        this.gradesPreviewTitle = previewTitle
+        this.gradesPreviewTitle = document.createElement("h3")
+        this.gradesPreviewTitle.style.marginTop = "20px"
+        this.gradesPreviewTitle.style.marginRight = "20px"
+        this.gradesPreviewTitle.style.paddingBottom = "10px"
+        this.gradesPreviewTitle.style.borderBottomStyle = "dashed"
+        this.gradesPreviewTitle.style.borderColor = "gray"
+        this.gradesPreviewTitle.textContent = "Preview Exports"
+        this.wrapper.appendChild(this.gradesPreviewTitle)
 
         for (let section in this.convertedGrades) {
-            let sectionTitle = document.createElement("h3")
+            let sectionTitle = document.createElement("h4")
+            sectionTitle.style.marginTop = "15px"
             sectionTitle.textContent = section
             this.wrapper.appendChild(sectionTitle)
             this.gradesPreviewSectionTitles.push(sectionTitle)
 
+            let gradesPreviewTableWrapper = document.createElement("div")
+            gradesPreviewTableWrapper.style.maxHeight = "300px"
+            gradesPreviewTableWrapper.style.width = "1150px"
+            gradesPreviewTableWrapper.style.overflowY = "auto"
+            this.wrapper.appendChild(gradesPreviewTableWrapper)
+            this.gradesPreviewTableWrappers.push(gradesPreviewTableWrapper)
+
             let currentGradesJSON = this.convertedGrades[section]
             
-            let tableXML = `<thead valign = "top" style = "background-color: var(--ic-brand-button--primary-bgd); color: white; border: 1px solid white;">`
+            let tableXML = `<thead valign = "top" style = "background-color: var(--ic-brand-button--primary-bgd); color: white;">`
             tableXML += "<tr>"
             for (let columnName in currentGradesJSON[0]) if (
                 columnName == "STUDENT_LAST_NAME" || 
@@ -1071,9 +1103,8 @@ class CourseSection extends Section {
                 columnName == "OVERALL_SCORE" ||
                 columnName == "MAX_SCORE" ||
                 columnName == "ASSIGNMENT_TYPE" ||
-                columnName == "EXCUSED" ||
-                columnName == "SHOW_ONLY_WHEN_SCORED"
-            ) tableXML += "<th>" + columnName + "</th>"
+                columnName == "EXCUSED"
+            ) tableXML += `<th style = "border: 1px solid var(--ic-brand-button--primary-bgd);">` + columnName + "</th>"
             tableXML += "</tr></thead><tbody>"
 
             for (let i = 0; i < currentGradesJSON.length; i++) {
@@ -1085,12 +1116,11 @@ class CourseSection extends Section {
                         columnName == "OVERALL_SCORE" ||
                         columnName == "MAX_SCORE" ||
                         columnName == "ASSIGNMENT_TYPE" ||
-                        columnName == "EXCUSED" ||
-                        columnName == "SHOW_ONLY_WHEN_SCORED"
-                    ) tableXML += `<td style = "border: 1px solid gray;">` + currentGradesJSON[i][columnName] + "</td>"
+                        columnName == "EXCUSED"
+                    ) tableXML += `<td style = "border: 1px dashed darkgray;">` + currentGradesJSON[i][columnName] + "</td>"
 
                     else if (columnName == "ASSIGNMENT_NAME") {
-                        tableXML += `<td style = "border: 1px solid gray;"><a href = "` + currentGradesJSON[i]["ASSIGNMENT_DESCRIPTION"].slice(12) + `" target = "_blank">` + currentGradesJSON[i][columnName] + "</a></td>"
+                        tableXML += `<td style = "border: 1px dashed darkgray;"><a href = "` + currentGradesJSON[i]["ASSIGNMENT_DESCRIPTION"].slice(12) + `" target = "_blank">` + currentGradesJSON[i][columnName] + "</a></td>"
                     }
                 }
                 tableXML += "</tr>"
@@ -1099,15 +1129,13 @@ class CourseSection extends Section {
             tableXML += "</tbody>"
 
             let sectionTable = document.createElement("table")
-            sectionTable.style.maxWidth = "200px"
-            sectionTable.style.height = "200px"
-            sectionTable.style.overflowX = "auto"
-            sectionTable.style.overflowY = "auto"
-            sectionTable.style.borderSpacing  = "0"
+            sectionTable.style.width = "1150px"
+            sectionTable.style.borderSpacing = "5px"
             sectionTable.style.fontSize = "15px"
             sectionTable.innerHTML = tableXML
-            this.wrapper.appendChild(sectionTable)
+            gradesPreviewTableWrapper.appendChild(sectionTable)
             this.gradesPreviewTables.push(sectionTable)
+            
 
         }
 
@@ -1148,14 +1176,21 @@ class CourseSection extends Section {
             this.makeTypeMatchers()
 
             console.log("loading grades")
-/*
-            var submissionsParameters = "?student_ids[]=all"
-            for (let i = 0; i < assignments.length; i++) submissionsParameters += "&assignment_ids[]=" + assignments[i].id
 
-            getDataAsync(["courses", this.id, "students", "submissions", submissionsParameters], accessToken).then((scores) => {
-                console.log(scores)
-            })
-*/
+            if (assignments.length == 0) {
+                
+                this.grades = []
+                console.log("no graded assignments exist")
+
+                this.convertGrades()
+                this.makeTypeMatchers()
+                saveCourses()
+
+                this.refreshGradesButton.disabled = false
+
+                this.loading.endAnimation(this.loading)
+            }
+
             var assignmentScores = []
             for (let i = 0; i < assignments.length; i++) {
                 window.setTimeout(() => {
@@ -1185,6 +1220,8 @@ class CourseSection extends Section {
                             this.convertGrades()
                             this.makeTypeMatchers()
                             saveCourses()
+
+                            this.refreshGradesButton.disabled = false
 
                             this.loading.endAnimation(this.loading)
                         }
@@ -1242,9 +1279,7 @@ class CourseSection extends Section {
                     }
 
                     let assignmentDate = new Date(this.assignments[k].created_at)
-                    assignmentDate.setTime(assignmentDate.getTime() + 86400000)
                     let dueDate = new Date(currentDate.due_at)
-                    dueDate.setTime(dueDate.getTime() + 86400000)
 
                     if (assignmentDate.getTime() < termStartDate.getTime()) assignmentDate = termStartDate
                     else if (assignmentDate.getTime() > termEndDate.getTime()) assignmentDate = termEndDate
