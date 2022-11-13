@@ -576,6 +576,8 @@ class SettingsSection extends Section {
                 types = []
                 for (let row in typeSheet) if (row.indexOf("B") != -1) types.push(typeSheet[row].h)
                 types.splice(0, 3)
+
+                for (let i = 0; i < courseSections.length; i++) courseSections[i].makeTypeMatchers()
         
                 chrome.storage.local.set({types: JSON.stringify(types)}, () => {
                     console.log("types saved")
@@ -591,7 +593,7 @@ class SettingsSection extends Section {
         this.accessTokenInput = document.createElement("input")
         this.accessTokenInput.type = "text"
         this.accessTokenInput.name = "accessTokenInput"
-        this.accessTokenInput.value = accessToken
+        this.accessTokenInput.value = accessToken || ""
         
         this.wrapper.appendChild(this.accessTokenInput)
 
@@ -613,10 +615,9 @@ class SettingsSection extends Section {
             accessToken = this.accessTokenInput.value
             if (accessToken == null) accessToken = ""
             getCoursesAsync()
-            chrome.storage.local.set({accessToken: accessToken}, () => {
-                console.log("access token saved")
-            })
         }
+
+        this.accessTokenSave.click()
 
 
 
@@ -756,7 +757,6 @@ class CourseSection extends Section {
 
         this.id = courseInfo.id
         this.name = courseInfo.name
-        this.index = courseInfo.index
         this.sections = courseInfo.sections
         this.assignments = courseInfo.assignments
         this.grades = courseInfo.grades
@@ -1328,11 +1328,6 @@ function saveCourses() {
         courseInfos.push({
             id: courseSections[i].id,
             name: courseSections[i].name,
-            index: courseSections[i].index,
-            sections: courseSections[i].sections,
-            assignments: courseSections[i].assignments,
-            grades: courseSections[i].grades,
-            assignmentGroups: courseSections[i].assignmentGroups,
             typeSelections: courseSections[i].typeSelections,
             lastSaveDate: courseSections[i].lastSaveDate,
             sows: courseSections[i].sows
@@ -1383,14 +1378,9 @@ function getCoursesAsync() {
 
 
 
-chrome.storage.local.get(["accessToken", "types", "courseInfos"], (result) => {
-    accessToken = result.accessToken
-    if (accessToken == null) accessToken = ""
+chrome.storage.local.get(["types", "courseInfos"], (result) => {
 
-    settingsSection.accessTokenInput.value = accessToken
-    getCoursesAsync()
-
-    types = (result.types != null) ? JSON.parse(result.types) : null
+    types = (result.types != null) ? JSON.parse(result.types) : []
 
     if (result.courseInfos != null) {
         let courseInfos = JSON.parse(result.courseInfos)
