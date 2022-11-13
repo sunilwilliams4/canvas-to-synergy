@@ -39,7 +39,7 @@ function getPaginationLinks(header) {
 }
 
 
-function getData(specifications, accessToken) {
+function getData(specifications) {
 
     let donePaginating = false
     let maxPaginations = 100
@@ -57,7 +57,6 @@ function getData(specifications, accessToken) {
         let xhr = new XMLHttpRequest()
 
         xhr.open("GET", url, false)
-        xhr.setRequestHeader("Authorization", "Bearer " + accessToken)
         xhr.send()
 
         let linkHeader = xhr.getResponseHeader("Link")
@@ -82,12 +81,11 @@ function getData(specifications, accessToken) {
 
 
 
-function getStuff(url, accessToken) {
+function getStuff(url) {
 
     let xhr = new XMLHttpRequest()
 
     xhr.open("GET", url)
-    xhr.setRequestHeader("Authorization", "Bearer " + accessToken)
     xhr.send()
 
     return new Promise((resolve) => {
@@ -99,7 +97,7 @@ function getStuff(url, accessToken) {
 
 
 
-async function getDataAsync(specifications, accessToken) {
+async function getDataAsync(specifications) {
 
     let donePaginating = false
     let maxPaginations = 100
@@ -114,7 +112,7 @@ async function getDataAsync(specifications, accessToken) {
     while (!donePaginating && paginationCounter < maxPaginations) {
         paginationCounter++
 
-        let xhr = await getStuff(url, accessToken)
+        let xhr = await getStuff(url)
 
         let linkHeader = xhr.getResponseHeader("Link")
         if (linkHeader != null) {
@@ -143,7 +141,6 @@ var canvasMenu = document.getElementById("menu")
 
 if (canvasMenu != null) {
 
-var accessToken
 var types = []
 
 var canvasWrapper = document.getElementById("wrapper")
@@ -441,6 +438,8 @@ class HomeSection extends Section {
         this.coursesLoading = new Loading(35, this.wrapper)
         this.coursesLoading.startLoading()
 
+        getCoursesAsync()
+
 
         this.currentCourses = []
 
@@ -586,41 +585,6 @@ class SettingsSection extends Section {
         }
 
 
-        let accessTokenLabel = document.createElement("span")
-        accessTokenLabel.innerHTML = "<br>Access Token (optional): "
-        this.wrapper.appendChild(accessTokenLabel)
-
-        this.accessTokenInput = document.createElement("input")
-        this.accessTokenInput.type = "text"
-        this.accessTokenInput.name = "accessTokenInput"
-        this.accessTokenInput.value = accessToken || ""
-        
-        this.wrapper.appendChild(this.accessTokenInput)
-
-
-        this.accessTokenSave = document.createElement("button")
-        this.accessTokenSave.classList.add("Button", "Button-primary")
-        this.accessTokenSave.style.marginLeft = "10px"
-        this.accessTokenSave.style.color = "white"
-        this.accessTokenSave.style.transition = "background-color .25s"
-        this.accessTokenSave.style.backgroundColor = "var(--ic-brand-button--primary-bgd)"
-        this.accessTokenSave.onmouseover = () => { this.accessTokenSave.style.backgroundColor = "var(--ic-brand-button--primary-bgd-darkened-5)" }
-        this.accessTokenSave.onmouseleave = () => { this.accessTokenSave.style.backgroundColor = "var(--ic-brand-button--primary-bgd)" }
-        this.accessTokenSave.style.border = "1px solid"
-        this.accessTokenSave.style.borderColor = "var(--ic-brand-button--primary-bgd-darkened-15)"
-        this.accessTokenSave.textContent = "Save"
-        this.wrapper.appendChild(this.accessTokenSave)
-
-        this.accessTokenSave.onclick = () => {
-            accessToken = this.accessTokenInput.value
-            if (accessToken == null) accessToken = ""
-            getCoursesAsync()
-        }
-
-        this.accessTokenSave.click()
-
-
-
         this.fileLineBreak = document.createElement("br")
         this.wrapper.appendChild(this.fileLineBreak)
 
@@ -660,7 +624,7 @@ class SettingsSection extends Section {
         this.getButton.onclick = async () => {
             this.getLoading.startLoading()
             try {
-                let data = await getDataAsync([this.getRawDataInput.value], accessToken)
+                let data = await getDataAsync([this.getRawDataInput.value])
                 let rawData = "<br>" + JSON.stringify(data, null, "\t")
                 for (let i = rawData.length - 1; i >= 0 ; i--) if (rawData[i] == "\n") rawData = rawData.slice(0, i) + "<br>" + rawData.slice(i)
                 for (let i = rawData.length - 1; i >= 0 ; i--) if (rawData[i] == "\t") rawData = rawData.slice(0, i) + "&emsp;" + rawData.slice(i)
@@ -1145,18 +1109,14 @@ class CourseSection extends Section {
 
 
     fetchGrades() {
-        if (accessToken == null) {
-            console.log("access token not entered")
-            return
-        }
     
         
-        getDataAsync(["courses", this.id, "sections", "?include[]=students"], accessToken).then((sections) => {
+        getDataAsync(["courses", this.id, "sections", "?include[]=students"]).then((sections) => {
             this.sections = sections
             console.log(sections)
         })
 
-        getDataAsync(["courses", this.id, "assignments", "?include[]=all_dates"], accessToken).then((assignments) => {
+        getDataAsync(["courses", this.id, "assignments", "?include[]=all_dates"]).then((assignments) => {
             console.log(assignments)
             for (let i = assignments.length - 1; i >= 0; i--) if (!assignments[i].graded_submissions_exist) assignments.splice(i, 1)
             let optimizedAssignments = []
@@ -1194,7 +1154,7 @@ class CourseSection extends Section {
             var assignmentScores = []
             for (let i = 0; i < assignments.length; i++) {
                 window.setTimeout(() => {
-                    getDataAsync(["courses", this.id, "assignments", assignments[i].id, "submissions"], accessToken).then((scores) => {
+                    getDataAsync(["courses", this.id, "assignments", assignments[i].id, "submissions"]).then((scores) => {
                         assignmentScores[i] = scores
         
                         let doneLoadingGrades = true
@@ -1231,7 +1191,7 @@ class CourseSection extends Section {
             
         })
 
-        getDataAsync(["courses", this.id, "assignment_groups"], accessToken).then((assignmentGroups) => {
+        getDataAsync(["courses", this.id, "assignment_groups"]).then((assignmentGroups) => {
             this.assignmentGroups = assignmentGroups
             console.log(assignmentGroups)
 
@@ -1355,7 +1315,7 @@ var courseSections = []
 
 function getCoursesAsync() {
         
-        getDataAsync(["users", "self", "courses"], accessToken).then((courses) => {
+        getDataAsync(["users", "self", "courses"]).then((courses) => {
             let currentDate = new Date(Date.now())
             let currentSchoolYear
             if (currentDate.getMonth() < 4) currentSchoolYear = currentDate.getFullYear()// 0 indexed
