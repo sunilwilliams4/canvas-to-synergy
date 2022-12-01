@@ -438,13 +438,13 @@ class HomeSection extends Section {
         this.coursesLoading = new Loading(35, this.wrapper)
         this.coursesLoading.startLoading()
 
-        getCoursesAsync()
-
-
         this.currentCourses = []
 
         this.addCourseLabels = []
         this.addCourseButtons = []
+
+        getCoursesAsync()
+
 
     }
 
