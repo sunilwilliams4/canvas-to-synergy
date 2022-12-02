@@ -1,33 +1,29 @@
 {
-    "manifest_version": 3,
-    "name": "Canvas To Synergy",
-    "version": "1.0",
-    "description": "Download and convert your Canvas grades into Synergy import files.",
+  "manifest_version": 3,
+  "name": "Canvas To Synergy",
+  "version": "0.0.1",
+  "description": "Download and convert your Canvas grades into Synergy import files.",
+
+  "permissions": [
+    "storage"
+  ],
+
+  "icons": {
+    "16": "images/logo16.png",
+    "48": "images/logo48.png",
+    "128": "images/logo48.png"
+  },
+  "content_scripts": [
+    {
+      "js": [
+        "scripts/xlsx.js",
+        "scripts/read-site.js"
+      ],
+      "matches": [
+        "https://lms.pps.net/*"
+      ]
+    }
+  ]
   
-    "permissions": [
-      "tabs",
-      "storage",
-      "storage"
-    ],
 
-    "action": {
-      "default_popup": "hello.html"
-    },
-    "icons": {
-      "16": "images/logo16.png",
-      "48": "images/logo48.png",
-      "128": "images/logo48.png"
-    },
-    "content_scripts": [
-      {
-        "js": [
-          "scripts/read-site.js"
-        ],
-        "matches": [
-          "https://lms.pps.net/*"
-        ]
-      }
-    ]
-    
-
-  }
+}
