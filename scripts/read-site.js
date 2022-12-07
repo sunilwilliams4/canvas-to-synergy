@@ -772,6 +772,8 @@ class CourseSection extends Section {
         if (this.lastSaveDate == null) this.lastSaveDate = null
         if (this.sows == null) this.sows = false
 
+        this.studentsToIgnore = []
+
 
 
         this.sideBarLink = new SectionLink(this.name, this)
@@ -860,6 +862,10 @@ class CourseSection extends Section {
         this.sowsCheckbox
         this.sowsLabel
 
+        this.ignoreStudentsListWrapper
+        this.ignoreStudentsList
+        this.ignoreStudentsSelected = []
+
         this.saveChangesButton
         this.lastSaveDateLabel
 
@@ -890,6 +896,7 @@ class CourseSection extends Section {
         if (this.sowsCheckbox != null) this.sowsCheckbox.remove()
         if (this.sowsLabel != null) this.sowsLabel.remove()
         if (this.downloadTitle != null) this.downloadTitle.remove()
+        if (this.ignoreStudentsListWrapper != null) this.ignoreStudentsListWrapper.remove()
 
         for (let i = 0; i < this.typeMatchers.length; i++) this.typeMatchers[i].remove()
         this.typeMatchers = []
@@ -959,12 +966,51 @@ class CourseSection extends Section {
 
         let sowsLabel = document.createElement("span")
         sowsLabel.style.height = "20px"
-        sowsLabel.innerHTML = "Show Only When Scored<br><br>"
+        sowsLabel.innerHTML = "Show Only When Scored<br>"
         this.wrapper.appendChild(sowsLabel)
         this.sowsLabel = sowsLabel
 
         sowsCheckbox.onclick = () => {
             this.sows = sowsCheckbox.checked
+        }
+
+        this.ignoreStudentsListWrapper = document.createElement("div")
+        this.wrapper.appendChild(this.ignoreStudentsListWrapper)
+        
+        let ignoreStudentsTitle = document.createElement("i")
+        ignoreStudentsTitle.style.color = "gray"
+        ignoreStudentsTitle.textContent = "Select students to be excluded from export (Ctrl + click)"
+        this.ignoreStudentsListWrapper.appendChild(ignoreStudentsTitle)
+
+        this.ignoreStudentsListWrapper.appendChild(document.createElement("br"))
+
+        let ignoreStudentsList = document.createElement("select")
+        ignoreStudentsList.style = `
+            height: 150px;
+        `
+        ignoreStudentsList.multiple = true
+        this.ignoreStudentsListWrapper.appendChild(ignoreStudentsList)
+        this.ignoreStudentsList = ignoreStudentsList
+
+        for (let i = 0; i < this.sections.length; i++) {
+            for (let j = 0; j < this.sections[i].students.length; j++) {
+                let option = document.createElement("option")
+                option.value = this.sections[i].students[j].sis_user_id
+                option.textContent = this.sections[i].students[j].sortable_name
+                
+                for (let k = 0; k < this.studentsToIgnore.length; k++) if (this.sections[i].students[j].sis_user_id == this.studentsToIgnore[k]) option.selected = true
+
+                ignoreStudentsList.appendChild(option)
+            }
+        }
+
+        this.ignoreStudentsListWrapper.appendChild(document.createElement("br"))
+
+        ignoreStudentsList.onchange = () => {
+            this.studentsToIgnore = []
+            for (let i in ignoreStudentsList.options) {
+                if (ignoreStudentsList.options[i].selected) this.studentsToIgnore.push(ignoreStudentsList.options[i].value)
+            }
         }
         
         
@@ -1255,6 +1301,11 @@ class CourseSection extends Section {
             
             if (this.sections[i].students != null) for (let j = 0; j < this.sections[i].students.length; j++) {
                 let currentStudent = this.sections[i].students[j]
+                
+                let ignore = false
+                for (let m = 0; m < this.studentsToIgnore.length; m++) if (Number(currentStudent.sis_user_id) == this.studentsToIgnore[m]) ignore = true
+                if (ignore) continue
+
                 for (let k = 0; k < this.grades.length; k++) if (this.assignments[k] != null) {
                     let currentAssignmentType
                     for (let l = 0; l < this.assignmentGroups.length; l++) if (this.assignments[k].assignment_group_id == this.assignmentGroups[l].id) currentAssignmentType = this.typeSelections[this.assignmentGroups[l].name]
