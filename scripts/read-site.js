@@ -423,7 +423,10 @@ class HomeSection extends Section {
             <option value = "2">Quarter 2</option>
             <option value = "3">Quarter 3</option>
             <option value = "4">Quarter 4</option>`
-        chrome.storage.local.get(["currentTerm"], (result) => { this.termSelector.value = result.currentTerm })
+        chrome.storage.local.get(["currentTerm"], (result) => {
+            this.termSelector.value = result.currentTerm
+            homeSection.setTermDates()
+        })
         this.wrapper.appendChild(this.termSelector)
 
         this.setTermDates()
