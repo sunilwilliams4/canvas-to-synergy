@@ -1,0 +1,99 @@
+
+.c2sButton {
+
+    border-radius: 3px;
+    padding: 8px 14px;
+    display: "inline-block";
+    line-height: 20px;
+    font-size: 1rem;
+    margin-bottom: 0px;
+    text-align: center;
+    overflow: hidden;
+    text-shadow: none;
+    user-select: none;
+    
+}
+
+.removeButton {
+
+    margin-right: 10px;
+    color: white;
+    transition: background-color .25s;
+    background-color: #E0061F;
+    border: 1px solid;
+    border-color: #E0061F;
+}
+
+.removeButton:hover {
+    background-color: #E0061F;
+}
+
+
+.actionButton {
+
+    color: white;
+    transition: background-color .25s;
+    background-color: var(--ic-brand-button--primary-bgd);
+    border: 1px solid;
+    border-color: var(--ic-brand-button--primary-bgd-darkened-15);
+}
+
+.actionButton:hover {
+    background-color: var(--ic-brand-button--primary-bgd-darkened-5);
+}
+
+
+.addedButton {
+    color: white;
+    transition: background-color .25s;
+    background-color: var(--fOyUs-backgroundSuccess);
+    border: 1px solid;
+    border-color: var(--fOyUs-borderColorSuccess);
+}
+
+.addedButton:hover {
+    background-color: var(--fOyUs-focusColorSuccess);
+}
+
+.addedButton:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
+
+.ignoreStudentsList {
+    height: 250px;
+}
+
+.ignoreStudentsList:focus option:checked {
+    background: red;
+}
+
+
+.info {
+    margin-left: 10px;
+
+    fill: #2B6683;
+    cursor: pointer;
+}
+
+.infoPopup {
+    position: absolute;
+    z-index: 150;
+
+    padding: 5px;
+
+    max-width: 200px;
+
+    font-size: 15px;
+
+    color: rgb(16, 16, 16);
+    background-color: white;
+
+    border: 1px solid #ccc;
+    border-radius: 3px;
+
+    transition: opacity .1s;
+}
+

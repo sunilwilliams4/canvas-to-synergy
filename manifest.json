@@ -15,7 +15,11 @@
   },
   "content_scripts": [
     {
+      "css": [
+        "styles/style.css"
+      ],
       "js": [
+        "scripts/dates.js",
         "scripts/xlsx.js",
         "scripts/read-site.js"
       ],
