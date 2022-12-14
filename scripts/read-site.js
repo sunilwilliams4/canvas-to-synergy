@@ -378,6 +378,42 @@ class Info {
 
 
 
+class LoadingBar {
+    constructor(parent) {
+        this.wrapper = document.createElement("div")
+        this.wrapper.style = `
+        margin-top: 10px;
+
+        width: 475px;
+        height: 10px;
+        
+        overflow-x: hidden;
+
+        border: 1px solid #ccc;
+        border-radius: 3px;
+
+        `
+        parent.appendChild(this.wrapper)
+
+        this.indicator = document.createElement("div")
+        this.indicator.style = `
+        width: 0%;
+        height: 100%;
+
+        background-color: green;
+
+        transition: width .375s;
+        `
+        this.wrapper.appendChild(this.indicator)
+    }
+
+    updateStatus(value) {
+        this.indicator.style.width = (value * 100) + "%"
+    }
+}
+
+
+
 class Section {
     static allSections = []
     constructor(title) {
@@ -580,8 +616,6 @@ class SettingsSection extends Section {
         }
 
 
-
-
     }
 
     
@@ -597,16 +631,10 @@ class HelpSection extends Section {
 
         this.instructionsBody = document.createElement("p")
         this.instructionsBody.innerHTML = `
-        <br><i style = "color: green;"><b>On First Time Use</b></i>
-        <br> - Go to <b>Import Assignments</b> under the <b>Grade Book</b> dropdown menu in Synergy
-        <br> - Click on the <b>Download Sample File</b> button
+        <br><i style = "color: green;"><b>First Time Setup</b></i><i style = "color: gray"> (Synergy Sample File)</i>
+        <br> - Go to <b>Import Assignments</b> under the <b>Grade Book</b> dropdown menu in TeacherVUE
+        <br> - Click on the <b>Download Sample File</b> button in the top right of the page
         <br> - Upload this file to Canvas To Synergy in the <b>Settings</b> page
-        <br>
-        <br><i style = "color: green;"><b>On Everyday Use</b></i><i style = "color: gray"> (steps elaborated upon further down)</i>
-        <br> - In the Canvas To Synergy <b>Home</b> page select the grading period you would like to import grades for
-        <br> - Refresh Grades for your courses
-        <br> - Download Synergy import files
-        <br> - Upload files to Synergy
         <br>
         <br><i style = "color: green;"><b>Adding Courses</b></i>
         <br> - In the Canvas To Synergy <b>Home</b> page, click <b>+ Add</b> next to courses that you would like to use with Canvas To Synergy
@@ -615,20 +643,16 @@ class HelpSection extends Section {
         <br> - In a Canvas To Synergy course page, click <b>Remove This Course</b>
         <br><i style = "color: gray">&emsp; - This only affects your Canvas To Synergy preferences, Canvas To Synergy cannot delete your actual courses</i>
         <br>
-        <br><i style = "color: green;"><b>Loading Grades</b></i><i style = "color: gray"> (for each course)</i>
-        <br> - In a Canvas To Synergy course page, click <b>Refresh Grades For This Course</b>
-        <br> - Wait until loading has finished before moving on to downloading Synergy import files
-        <br>
-        <br><i style = "color: green;"><b>Configuring Export Settings</b></i><i style = "color: gray"> (for each course)</i>
+        <br><i style = "color: green;"><b>Configuring Export Settings</b></i><i style = "color: gray"> (per course)</i>
         <br> - Select the Synergy assignment types from the dropdowns that match the Canvas assignment groups on the left (for assignment weighting)
         <br> - If you'd like ungraded submissions to be hidden in Synergy, check the <b>Show Only When Scored</b> checkbox
-        <br> - Save changes by clicking the <b>Save Changes</b> button
+        <br> - If you'd like to exclude any students from the grade transfer, select their names in the selection box with <b><i>Ctrl + click</i></b>
         <br>
-        <br><i style = "color: green;"><b>Downloading Synergy Import Files</b></i><i style = "color: gray"> (for each course section)</i>
+        <br><i style = "color: green;"><b>Downloading Synergy Import Files</b></i><i style = "color: gray"> (per course section)</i>
         <br> - In a Canvas To Synergy course page, click on the <b>Download</b> button corresponding with the section you would like to download grades for
         <br>
-        <br><i style = "color: green;"><b>Importing grades to Synergy</b></i><i style = "color: gray"> (for each course section)</i>
-        <br> - Go to <b>Import Assignments</b> under the <b>Grade Book</b> dropdown menu in Synergy
+        <br><i style = "color: green;"><b>Importing grades to Synergy</b></i><i style = "color: gray"> (per course section)</i>
+        <br> - Go to <b>Import Assignments</b> under the <b>Grade Book</b> dropdown menu in TeacherVUE
         <br> - Make sure you are in the desired course section
         <br> - Turn on the first and third settings
         <br> - Select or drag and drop the corresponding Canvas To Synergy download file into the file selector
@@ -672,6 +696,8 @@ class CourseSection extends Section {
         this.sows = courseInfo.sows || false
         this.studentsToIgnore = courseInfo.studentsToIgnore || []
 
+        this.fetched = false
+
 
 
         this.sideBarLink = new SectionLink(this.name, this)
@@ -700,28 +726,12 @@ class CourseSection extends Section {
         this.loading = new Loading(27.5, this.wrapper)
 
         this.refreshGradesButton.onclick = () => {
-            this.refreshGradesButton.disabled = true
 
             this.fetchGrades()
-
-            this.loading.startLoading()
         }
 
-
-        this.exportSettingsTitle = document.createElement("h3")
-        this.exportSettingsTitle.style.marginTop = "20px"
-        this.exportSettingsTitle.style.marginRight = "20px"
-        this.exportSettingsTitle.style.paddingBottom = "10px"
-        this.exportSettingsTitle.style.borderBottomStyle = "dashed"
-        this.exportSettingsTitle.style.borderColor = "gray"
-        this.exportSettingsTitle.textContent = "Export Settings"
-        this.wrapper.appendChild(this.exportSettingsTitle)
-
-        this.exportSettingsInfo = new Info(20, `
-        Match your Canvas weighting categories to your Synergy weighting categories<br><br>
-        Select whether or not you would like unscored assignments to show up in your students' gradebooks<br><br>
-        Select students to exclude from the transfer`, this.exportSettingsTitle)
-
+        this.loadingBar = new LoadingBar(this.wrapper)
+        this.loadingBar.wrapper.style.display = "none"
 
 
 
@@ -740,186 +750,210 @@ class CourseSection extends Section {
         for (let i in this.courseElements) this.courseElements[i].remove()
         for (let i in this.infos) this.infos[i].wrapper.remove()
 
-        if (types.length > 0) {
-            let typeSelectorWrapper = document.createElement("div")
-            typeSelectorWrapper.style = `
-                margin-top: 15px;
-                width: 520px;`
-            this.wrapper.appendChild(typeSelectorWrapper)
-            this.courseElements.push(typeSelectorWrapper)
+        if (this.assignmentGroups.length == 0 || this.assignments.length == 0 || this.sections.length == 0 || this.grades.length == 0) {
+            return
+        }
 
-            let groupsTitle = document.createElement("i")
-            groupsTitle.style.float = "left"
-            groupsTitle.style.color = "gray"
-            groupsTitle.textContent = "Assignment Group (Canvas)"
-            typeSelectorWrapper.appendChild(groupsTitle)
+        this.loadingBar.wrapper.style.display = "none"
+        this.loadingBar.updateStatus(0)
 
-            let typesTitle = document.createElement("i")
-            typesTitle.style.float = "right"
-            typesTitle.style.color = "gray"
-            typesTitle.textContent = "Assignment Type (Synergy)"
-            typeSelectorWrapper.appendChild(typesTitle)
+        let exportSettingsTitle = document.createElement("h3")
+        exportSettingsTitle.style.marginTop = "20px"
+        exportSettingsTitle.style.marginRight = "20px"
+        exportSettingsTitle.style.paddingBottom = "10px"
+        exportSettingsTitle.style.borderBottomStyle = "dashed"
+        exportSettingsTitle.style.borderColor = "gray"
+        exportSettingsTitle.textContent = "Export Settings"
+        this.wrapper.appendChild(exportSettingsTitle)
+        this.courseElements.push(exportSettingsTitle)
 
-            typeSelectorWrapper.innerHTML += "<br>"
+        this.infos.push(new Info(20, `
+        Match your Canvas weighting categories to your Synergy weighting categories<br><br>
+        Select whether or not you would like unscored assignments to show up in your students' gradebooks<br><br>
+        Select students to exclude from the transfer`, exportSettingsTitle))
 
-            for (let i = 0; i < this.assignmentGroups.length; i++) {
+        if (this.assignmentGroups.length != 0) {
 
-                let typeMatcher = document.createElement("div")
-                
-                typeMatcher.style = `
-                    margin-top: 10px;
-                    padding-top: 10px;
-                    border-top-style: dotted;
-                    border-color: darkgray;`
-                typeSelectorWrapper.appendChild(typeMatcher)
-                this.courseElements.push(typeMatcher)
+            if (types.length > 0) {
+                let typeSelectorWrapper = document.createElement("div")
+                typeSelectorWrapper.style = `
+                    margin-top: 15px;
+                    width: 520px;`
+                this.wrapper.appendChild(typeSelectorWrapper)
+                this.courseElements.push(typeSelectorWrapper)
 
-                
-                let typeDropdownWrapper = document.createElement("div")
-                typeDropdownWrapper.style.float = "right"
-                typeMatcher.appendChild(typeDropdownWrapper)
+                let groupsTitle = document.createElement("i")
+                groupsTitle.style.float = "left"
+                groupsTitle.style.color = "gray"
+                groupsTitle.textContent = "Assignment Group (Canvas)"
+                typeSelectorWrapper.appendChild(groupsTitle)
 
-                let typeDropdown = document.createElement("select")
-                typeDropdown.title = "Select the appropriate Synergy assignment type for the assignment group to the left"
-                typeDropdownWrapper.appendChild(typeDropdown)
+                let typesTitle = document.createElement("i")
+                typesTitle.style.float = "right"
+                typesTitle.style.color = "gray"
+                typesTitle.textContent = "Assignment Type (Synergy)"
+                typeSelectorWrapper.appendChild(typesTitle)
 
-                for (let j = 0; j < types.length; j++) {
-                    let typeDropdownOption = document.createElement("option")
-                    typeDropdownOption.value = types[j]
-                    typeDropdownOption.textContent = types[j]
-                    typeDropdown.appendChild(typeDropdownOption)
-                }
+                typeSelectorWrapper.innerHTML += "<br>"
 
-                if (Object.keys(this.typeSelections).length > 0) typeDropdown.value = this.typeSelections[this.assignmentGroups[i].name]
-                this.typeSelections[this.assignmentGroups[i].name] = typeDropdown.value
-                typeDropdown.onchange = () => {
+                for (let i = 0; i < this.assignmentGroups.length; i++) {
+
+                    let typeMatcher = document.createElement("div")
+                    
+                    typeMatcher.style = `
+                        margin-top: 10px;
+                        padding-top: 10px;
+                        border-top-style: dotted;
+                        border-color: darkgray;`
+                    typeSelectorWrapper.appendChild(typeMatcher)
+                    this.courseElements.push(typeMatcher)
+
+                    
+                    let typeDropdownWrapper = document.createElement("div")
+                    typeDropdownWrapper.style.float = "right"
+                    typeMatcher.appendChild(typeDropdownWrapper)
+
+                    let typeDropdown = document.createElement("select")
+                    typeDropdown.title = "Select the appropriate Synergy assignment type for the assignment group to the left"
+                    typeDropdownWrapper.appendChild(typeDropdown)
+
+                    for (let j = 0; j < types.length; j++) {
+                        let typeDropdownOption = document.createElement("option")
+                        typeDropdownOption.value = types[j]
+                        typeDropdownOption.textContent = types[j]
+                        typeDropdown.appendChild(typeDropdownOption)
+                    }
+
+                    if (Object.keys(this.typeSelections).length > 0) typeDropdown.value = this.typeSelections[this.assignmentGroups[i].name]
                     this.typeSelections[this.assignmentGroups[i].name] = typeDropdown.value
-                    this.convertGrades()
-                    this.makeTypeMatchers()
-                    saveCourses()
+                    typeDropdown.onchange = () => {
+                        this.typeSelections[this.assignmentGroups[i].name] = typeDropdown.value
+                        this.convertGrades()
+                        this.makeTypeMatchers()
+                        saveCourses()
+                    }
+
+                    let groupLabel = document.createElement("div")
+                    groupLabel.style = `
+                        padding: 7.5px 7.5px 7.5px 10px;
+                        width: 200px;
+                        background-color: green;
+                        color: white;
+                        border-radius: 3px;`
+                    groupLabel.textContent = this.assignmentGroups[i].name
+                    let groupLabelTitle = ""
+                    for (let j = 0; j < this.assignments.length; j++) if (this.assignments[j].assignment_group_id == this.assignmentGroups[i].id) groupLabelTitle += this.assignments[j].name + ", "
+                    groupLabelTitle = groupLabelTitle.slice(0, -2)
+                    groupLabel.title = groupLabelTitle
+
+                    typeMatcher.appendChild(groupLabel)
+
+                    
+
                 }
+            } else {
 
-                let groupLabel = document.createElement("div")
-                groupLabel.style = `
-                    padding: 7.5px 7.5px 7.5px 10px;
-                    width: 200px;
-                    background-color: green;
-                    color: white;
-                    border-radius: 3px;`
-                groupLabel.textContent = this.assignmentGroups[i].name
-                let groupLabelTitle = ""
-                for (let j = 0; j < this.assignments.length; j++) if (this.assignments[j].assignment_group_id == this.assignmentGroups[i].id) groupLabelTitle += this.assignments[j].name + ", "
-                groupLabelTitle = groupLabelTitle.slice(0, -2)
-                groupLabel.title = groupLabelTitle
+                let sampleFileLabel = document.createElement("span")
+                sampleFileLabel.innerHTML = "<br>Upload A Synergy Sample File: "
+                this.wrapper.appendChild(sampleFileLabel)
+                this.courseElements.push(sampleFileLabel)
 
-                typeMatcher.appendChild(groupLabel)
-
+                let massImportInput = document.createElement("input")
+                massImportInput.type = "file"
                 
+                this.wrapper.appendChild(massImportInput)
+                this.courseElements.push(massImportInput)
 
-            }
-        } else {
+                this.infos.push(new Info(20, "In order to match assignment weighting groups, you must first upload a Synergy sample file (see help page for instructions)", this.wrapper))
 
-            let sampleFileLabel = document.createElement("span")
-            sampleFileLabel.innerHTML = "<br>Upload A Synergy Sample File: "
-            this.wrapper.appendChild(sampleFileLabel)
-            this.courseElements.push(sampleFileLabel)
+                let lineBreak = document.createElement("br")
+                this.wrapper.appendChild(lineBreak)
+                this.courseElements.push(lineBreak)
+                
+                massImportInput.onchange = (event) => {
+                    let fileReader = new FileReader()
+                    fileReader.readAsBinaryString(event.target.files[0])
+                    fileReader.onload = () => {
+                        let massImport = XLSX.read(fileReader.result, {type: "binary"})
+                        let typeSheet = massImport.Sheets["Instructions"]
+                        console.log(typeSheet)
+                
+                        types = []
+                        for (let row in typeSheet) if (row.indexOf("B") != -1) types.push(typeSheet[row].h)
+                        types.splice(0, 3)
 
-            let massImportInput = document.createElement("input")
-            massImportInput.type = "file"
-            
-            this.wrapper.appendChild(massImportInput)
-            this.courseElements.push(massImportInput)
-
-            this.infos.push(new Info(20, "In order to match assignment weighting groups, you must first upload a Synergy sample file (see help page for instructions)", this.wrapper))
-
-            let lineBreak = document.createElement("br")
-            this.wrapper.appendChild(lineBreak)
-            this.courseElements.push(lineBreak)
-            
-            massImportInput.onchange = (event) => {
-                let fileReader = new FileReader()
-                fileReader.readAsBinaryString(event.target.files[0])
-                fileReader.onload = () => {
-                    let massImport = XLSX.read(fileReader.result, {type: "binary"})
-                    let typeSheet = massImport.Sheets["Instructions"]
-                    console.log(typeSheet)
-            
-                    types = []
-                    for (let row in typeSheet) if (row.indexOf("B") != -1) types.push(typeSheet[row].h)
-                    types.splice(0, 3)
-
-                    for (let i = 0; i < courseSections.length; i++) courseSections[i].makeTypeMatchers()
-            
-                    chrome.storage.local.set({types: JSON.stringify(types)}, () => {
-                        console.log("types saved")
-                    })
+                        for (let i = 0; i < courseSections.length; i++) courseSections[i].makeTypeMatchers()
+                
+                        chrome.storage.local.set({types: JSON.stringify(types)}, () => {
+                            console.log("types saved")
+                        })
+                    }
                 }
             }
-        }
 
 
-        let sowsCheckbox = document.createElement("input")
-        sowsCheckbox.type = "checkbox"
-        sowsCheckbox.style.margin = "20px 15px 20px 10px"
-        sowsCheckbox.checked = this.sows
-        this.wrapper.appendChild(sowsCheckbox)
-        this.courseElements.push(sowsCheckbox)
+            let sowsCheckbox = document.createElement("input")
+            sowsCheckbox.type = "checkbox"
+            sowsCheckbox.style.margin = "20px 15px 20px 10px"
+            sowsCheckbox.checked = this.sows
+            this.wrapper.appendChild(sowsCheckbox)
+            this.courseElements.push(sowsCheckbox)
 
-        let sowsLabel = document.createElement("span")
-        sowsLabel.style.height = "20px"
-        sowsLabel.innerHTML = "Show Only When Scored<br>"
-        this.wrapper.appendChild(sowsLabel)
-        this.courseElements.push(sowsLabel)
+            let sowsLabel = document.createElement("span")
+            sowsLabel.style.height = "20px"
+            sowsLabel.innerHTML = "Show Only When Scored<br>"
+            this.wrapper.appendChild(sowsLabel)
+            this.courseElements.push(sowsLabel)
 
-        sowsCheckbox.onclick = () => {
-            this.sows = sowsCheckbox.checked
-            this.convertGrades()
-            this.makeTypeMatchers()
-            saveCourses()
-        }
-
-        let ignoreStudentsListWrapper = document.createElement("div")
-        this.wrapper.appendChild(ignoreStudentsListWrapper)
-        this.courseElements.push(ignoreStudentsListWrapper)
-        
-        let ignoreStudentsTitle = document.createElement("i")
-        ignoreStudentsTitle.style.color = "gray"
-        ignoreStudentsTitle.textContent = "Select students to be excluded from export (Ctrl + click)"
-        ignoreStudentsListWrapper.appendChild(ignoreStudentsTitle)
-
-        ignoreStudentsListWrapper.appendChild(document.createElement("br"))
-
-        let ignoreStudentsList = document.createElement("select")
-        ignoreStudentsList.classList.add("ignoreStudentsList")
-        ignoreStudentsList.style.height = "150px"
-        ignoreStudentsList.multiple = true
-        ignoreStudentsListWrapper.appendChild(ignoreStudentsList)
-
-        for (let i = 0; i < this.sections.length; i++) {
-            for (let j = 0; j < this.sections[i].students.length; j++) {
-                let option = document.createElement("option")
-                option.value = this.sections[i].students[j].sis_user_id
-                option.textContent = this.sections[i].students[j].sortable_name
-                
-                for (let k = 0; k < this.studentsToIgnore.length; k++) if (this.sections[i].students[j].sis_user_id == this.studentsToIgnore[k]) option.selected = true
-
-                ignoreStudentsList.appendChild(option)
+            sowsCheckbox.onclick = () => {
+                this.sows = sowsCheckbox.checked
+                this.convertGrades()
+                this.makeTypeMatchers()
+                saveCourses()
             }
-        }
 
-        ignoreStudentsListWrapper.appendChild(document.createElement("br"))
+            let ignoreStudentsListWrapper = document.createElement("div")
+            this.wrapper.appendChild(ignoreStudentsListWrapper)
+            this.courseElements.push(ignoreStudentsListWrapper)
+            
+            let ignoreStudentsTitle = document.createElement("i")
+            ignoreStudentsTitle.style.color = "gray"
+            ignoreStudentsTitle.textContent = "Select students to be excluded from export (Ctrl + click)"
+            ignoreStudentsListWrapper.appendChild(ignoreStudentsTitle)
 
-        ignoreStudentsList.onchange = () => {
-            this.studentsToIgnore = []
-            for (let i in ignoreStudentsList.options) {
-                if (ignoreStudentsList.options[i].selected) this.studentsToIgnore.push(ignoreStudentsList.options[i].value)
+            ignoreStudentsListWrapper.appendChild(document.createElement("br"))
+
+            let ignoreStudentsList = document.createElement("select")
+            ignoreStudentsList.classList.add("ignoreStudentsList")
+            ignoreStudentsList.style.height = "150px"
+            ignoreStudentsList.multiple = true
+            ignoreStudentsListWrapper.appendChild(ignoreStudentsList)
+
+            for (let i = 0; i < this.sections.length; i++) {
+                if (this.sections[i].students != null) for (let j = 0; j < this.sections[i].students.length; j++) {
+                    let option = document.createElement("option")
+                    option.value = this.sections[i].students[j].sis_user_id
+                    option.textContent = this.sections[i].students[j].sortable_name
+                    
+                    for (let k = 0; k < this.studentsToIgnore.length; k++) if (this.sections[i].students[j].sis_user_id == this.studentsToIgnore[k]) option.selected = true
+
+                    ignoreStudentsList.appendChild(option)
+                }
             }
-            this.convertGrades()
-            this.makeTypeMatchers()
-            saveCourses()
-        }
-        
 
+            ignoreStudentsListWrapper.appendChild(document.createElement("br"))
+
+            ignoreStudentsList.onchange = () => {
+                this.studentsToIgnore = []
+                for (let i in ignoreStudentsList.options) {
+                    if (ignoreStudentsList.options[i].selected) this.studentsToIgnore.push(ignoreStudentsList.options[i].value)
+                }
+                this.convertGrades()
+                this.makeTypeMatchers()
+                saveCourses()
+            }
+            
+        }
 
 
         let downloadTitle = document.createElement("h3")
@@ -1011,8 +1045,26 @@ class CourseSection extends Section {
             gradesPreviewTableWrapper.style.maxHeight = "300px"
             gradesPreviewTableWrapper.style.width = "1150px"
             gradesPreviewTableWrapper.style.overflowY = "auto"
+            gradesPreviewTableWrapper.style.display = "none"
             this.wrapper.appendChild(gradesPreviewTableWrapper)
             this.courseElements.push(gradesPreviewTableWrapper)
+
+            let showTableButton = document.createElement("button")
+            showTableButton.classList.add("c2sButton", "actionButton")
+            showTableButton.style.marginLeft = "10px"
+            showTableButton.style.padding = "5px 8px 5px 8px"
+            showTableButton.textContent = "Show"
+            sectionTitle.appendChild(showTableButton)
+            showTableButton.onclick = () => {
+                if (gradesPreviewTableWrapper.style.display == "none") {
+                    gradesPreviewTableWrapper.style.display = "block"
+                    showTableButton.textContent = "Hide"
+                }
+                else {
+                    gradesPreviewTableWrapper.style.display = "none"
+                    showTableButton.textContent = "Show"
+                }
+            }
 
             let currentGradesJSON = this.convertedGrades[section]
             
@@ -1068,10 +1120,26 @@ class CourseSection extends Section {
 
     fetchGrades() {
     
+        this.fetched = true
+        this.refreshGradesButton.disabled = true
+        this.loading.startLoading()
+
+        this.loadingBar.wrapper.style.display = "block"
+        this.loadedValue = 0
+
+        this.assignmentGroups = []
+        this.assignments = []
+        this.sections = []
+        this.grades = []
+
+        this.makeTypeMatchers()
         
         getDataAsync(["courses", this.id, "sections", "?include[]=students"]).then((sections) => {
             this.sections = sections
             console.log(sections)
+
+            this.loadedValue += .1
+            this.loadingBar.updateStatus(this.loadedValue)
         })
 
         getDataAsync(["courses", this.id, "assignments", "?include[]=all_dates"]).then((assignments) => {
@@ -1090,12 +1158,15 @@ class CourseSection extends Section {
             }
             this.assignments = optimizedAssignments
             console.log(assignments)
-
-            this.makeTypeMatchers()
+            this.loadedValue += .1
+            this.loadingBar.updateStatus(this.loadedValue)
 
             console.log("loading grades")
 
             if (assignments.length == 0) {
+                
+                this.loadedValue = 1
+                this.loadingBar.updateStatus(this.loadedValue)
                 
                 this.grades = []
                 console.log("no graded assignments exist")
@@ -1114,6 +1185,9 @@ class CourseSection extends Section {
                 window.setTimeout(() => {
                     getDataAsync(["courses", this.id, "assignments", assignments[i].id, "submissions"]).then((scores) => {
                         assignmentScores[i] = scores
+                        this.loadedValue += .7 / assignments.length
+                        this.loadingBar.updateStatus(this.loadedValue)
+
         
                         let doneLoadingGrades = true
                         for (let j = 0; j < assignments.length; j++) if (assignmentScores[j] == null) doneLoadingGrades = false
@@ -1153,6 +1227,9 @@ class CourseSection extends Section {
             this.assignmentGroups = assignmentGroups
             console.log(assignmentGroups)
 
+            this.loadedValue += .1
+            this.loadingBar.updateStatus(this.loadedValue)
+
             this.makeTypeMatchers()
         })
     }
@@ -1163,7 +1240,7 @@ class CourseSection extends Section {
         // if any data is missing, return
         if (this.sections == null || this.sections == [] || this.assignments == null || this.assignments == [] || this.grades == null || this.grades == [] || this.assignmentGroups == null || this.assignmentGroups == []) return
 
-
+        console.log("converting grades")
         
         // turn imported data into a JSON
         let exportJSON = {}
@@ -1229,6 +1306,12 @@ class CourseSection extends Section {
     }
 
 
+    open() {
+        super.open()
+        if (!this.fetched) this.fetchGrades()
+    }
+
+
 }
 
 
@@ -1266,18 +1349,18 @@ var courseSections = []
 
 function getCoursesAsync() {
         
-    getDataAsync(["users", "self", "courses"]).then((courses) => {
-        console.log(courses)
-        var currentCourses = []
-        for (let i = 0; i < courses.length; i++) {
-            if (courses[i].sis_course_id != null && courses[i].sis_course_id.indexOf(currentSchoolYear) == 0) {
-                currentCourses.push(courses[i])
+        getDataAsync(["users", "self", "courses"]).then((courses) => {
+            console.log(courses)
+            var currentCourses = []
+            for (let i = 0; i < courses.length; i++) {
+                if (courses[i].sis_course_id != null && courses[i].sis_course_id.indexOf(currentSchoolYear) == 0) {
+                    currentCourses.push(courses[i])
+                }
             }
-        }
 
-        homeSection.populateCurrentCourses(currentCourses)
+            homeSection.populateCurrentCourses(currentCourses)
 
-    })
+        })
 
 }
 
