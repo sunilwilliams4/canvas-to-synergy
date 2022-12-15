@@ -255,6 +255,16 @@ headerHomeLink.textContent = "Canvas To Synergy "
 headerHomeLink.style.cursor = "pointer"
 headerWrapper.appendChild(headerHomeLink)
 
+let headerArrow = document.createElement("span")
+headerArrow.style.background = `url("/dist/images/breadcrumb-arrow-light-8702eeae02.svg") no-repeat 50% 50%`
+headerArrow.style.backgroundSize = "6px 11px"
+headerArrow.style.width = "6px"
+headerArrow.style.height = "11px"
+headerArrow.style.marginLeft = "9px"
+headerArrow.style.marginRight = "9px"
+headerArrow.style.display = "inline-block"
+headerWrapper.appendChild(headerArrow)
+
 let headerCurrentPage = document.createElement("span")
 headerCurrentPage.classList.add("ellipsable")
 headerCurrentPage.textContent = ""
@@ -448,7 +458,7 @@ class Section {
         for (let i = 0; i < Section.allSections.length; i++) {
             if (Section.allSections[i] == this) {
                 Section.allSections[i].wrapper.style.display = ""
-                headerCurrentPage.textContent = " > " + this.title.textContent
+                headerCurrentPage.textContent = this.title.textContent
             }
             else Section.allSections[i].wrapper.style.display = "none"
         }
@@ -528,13 +538,11 @@ class HomeSection extends Section {
             for (let j = 0; j < courseSections.length; j++) if (courseSections[j].id == this.currentCourses[i].id) alreadyAdded = true
 
             let text = "+ Add"
-            let disabled = false
             let elementClass = "actionButton"
 
             if (alreadyAdded) {
-                text = "Added"
-                disabled = true
-                elementClass = "addedButton"
+                text = "Remove"
+                elementClass = "removeButton"
             }
 
             let extraInfo = ""
@@ -551,7 +559,6 @@ class HomeSection extends Section {
             courseButton.classList.add(elementClass, "c2sButton")
             courseButton.style.margin = "5px"
             courseButton.textContent = text
-            courseButton.disabled = disabled
             this.wrapper.appendChild(courseButton)
             this.addCourseButtons.push(courseButton)
 
@@ -561,15 +568,30 @@ class HomeSection extends Section {
             this.addCourseLabels.push(courseLabel)
 
             courseButton.onclick = () => {
-                courseSections.push(new CourseSection({
-                    name: this.currentCourses[i].name,
-                    id: this.currentCourses[i].id
-                }))
+                if (courseButton.textContent == "+ Add") {
+                    courseSections.push(new CourseSection({
+                        name: this.currentCourses[i].name,
+                        id: this.currentCourses[i].id
+                    }))
+                    
+                    courseButton.classList.remove("actionButton")
+                    courseButton.classList.add("removeButton")
+                    courseButton.textContent = "Remove"
+                }
+                else {
+                    for (let j in courseSections) if (courseSections[j].id == this.currentCourses[i].id) {
+                        courseSections[j].sideBarLink.delete()
+                        courseSections[j].delete()
+
+                        courseSections.splice(courseSections.indexOf(courseSections[j]), 1)
+                    }
+
+                    courseButton.classList.remove("removeButton")
+                    courseButton.classList.add("actionButton")
+                    courseButton.textContent = "+ Add"
+                }
                 
-                courseButton.classList.remove("actionButton")
-                courseButton.classList.add("addedButton")
-                courseButton.textContent = "Added"
-                courseButton.disabled = true
+                saveCourses()
             }
         }
 
@@ -615,6 +637,81 @@ class SettingsSection extends Section {
                 })
             }
         }
+
+        
+        let preferencesTitle = document.createElement("h3")
+        preferencesTitle.style.marginTop = "20px"
+        preferencesTitle.style.marginRight = "20px"
+        preferencesTitle.style.paddingBottom = "10px"
+        preferencesTitle.style.borderBottomStyle = "dashed"
+        preferencesTitle.style.borderColor = "gray"
+        preferencesTitle.textContent = "Preferences"
+        this.wrapper.appendChild(preferencesTitle)
+
+        this.preferences = {
+            showPreviewExports: false,
+            transferOverallGrades: false
+        }
+        
+        let showPreviewExportsToggle = document.createElement("input")
+        showPreviewExportsToggle.type = "checkbox"
+        showPreviewExportsToggle.style.margin = "15px 15px 20px 10px"
+        showPreviewExportsToggle.checked = this.sows
+        this.wrapper.appendChild(showPreviewExportsToggle)
+
+        let showPreviewExportsLabel = document.createElement("span")
+        showPreviewExportsLabel.style.height = "20px"
+        showPreviewExportsLabel.innerHTML = "Show Preview Exports<br>"
+        this.wrapper.appendChild(showPreviewExportsLabel)
+
+        showPreviewExportsToggle.onchange = () => {
+            this.preferences.showPreviewExports = showPreviewExportsToggle.checked
+            this.savePreferences()
+            for (let i in courseSections) courseSections[i].makeTypeMatchers()
+        }
+
+        let transferOverallGradesToggle = document.createElement("input")
+        transferOverallGradesToggle.type = "checkbox"
+        transferOverallGradesToggle.style.margin = "15px 15px 20px 10px"
+        transferOverallGradesToggle.checked = this.sows
+        this.wrapper.appendChild(transferOverallGradesToggle)
+
+        let transferOverallGradesLabel = document.createElement("span")
+        transferOverallGradesLabel.style.height = "20px"
+        transferOverallGradesLabel.innerHTML = "Transfer Overall Grades<br>"
+        this.wrapper.appendChild(transferOverallGradesLabel)
+
+        transferOverallGradesToggle.onchange = () => {
+            this.preferences.transferOverallGrades = transferOverallGradesToggle.checked
+            this.savePreferences()
+            if (this.preferences.transferOverallGrades) transferOverallGradesBlurb.style.display = "block"
+            else transferOverallGradesBlurb.style.display = "none"
+            for (let i in courseSections) {
+                courseSections[i].fetched = false
+                courseSections[i].makeTypeMatchers()
+            }
+            
+        }
+        let transferOverallGradesBlurb = document.createElement("i")
+        transferOverallGradesBlurb.style.color = "gray"
+        transferOverallGradesBlurb.style.display = "none"
+        transferOverallGradesBlurb.textContent = `Before transfering grades with this feature, you must create a new assignment type in Synergy called "Canvas" with 100% weighting`
+        this.wrapper.appendChild(transferOverallGradesBlurb)
+
+
+        
+        chrome.storage.local.get(["preferences"], (result) => {
+
+            if (result.preferences != null) this.preferences = JSON.parse(result.preferences)
+
+            console.log(result)
+
+            showPreviewExportsToggle.checked = this.preferences.showPreviewExports
+            transferOverallGradesToggle.checked = this.preferences.transferOverallGrades
+            if (this.preferences.transferOverallGrades) {
+                transferOverallGradesBlurb.style.display = "block"
+            }
+        })
 
 
         let accessTokenLabel = document.createElement("span")
@@ -694,6 +791,13 @@ class SettingsSection extends Section {
         }
     }
 
+    savePreferences() {
+        
+        chrome.storage.local.set({preferences: JSON.stringify(this.preferences)}, () => {
+            console.log("preferences saved")
+        })
+    }
+
     
 }
 
@@ -708,7 +812,7 @@ class HelpSection extends Section {
         this.instructionsBody = document.createElement("p")
         this.instructionsBody.innerHTML = `
         <br><i style = "color: green;"><b>First Time Setup</b></i><i style = "color: gray"> (Synergy Sample File)</i>
-        <br> - Go to <b>Import Assignments</b> under the <b>Grade Book</b> dropdown menu in TeacherVUE
+        <br> - In TeacherVUE, go to the <b>Import Assignments</b> page under the <b>Grade Book</b> dropdown menu
         <br> - Click on the <b>Download Sample File</b> button in the top right of the page
         <br> - Upload this file to Canvas To Synergy in the <b>Settings</b> page
         <br>
@@ -777,29 +881,11 @@ class CourseSection extends Section {
 
 
         this.sideBarLink = new SectionLink(this.name, this)
-
-        this.removeButton = document.createElement("button")
-        this.removeButton.classList.add("removeButton", "c2sButton")
-        this.removeButton.textContent = "Remove This Course"
-        this.removeButton.title = "remove this course from your canvas to synergy course list"
-        this.wrapper.appendChild(this.removeButton)
-
-        this.removeButton.onclick = () => {
-            this.sideBarLink.delete()
-            super.delete()
-
-            courseSections.splice(courseSections.indexOf(this), 1)
-            saveCourses()
-            homeSection.populateCurrentCourses(homeSection.currentCourses)
-            homeSection.sideBarLink.link.click()
-        }
         
         this.refreshGradesButton = document.createElement("button")
-        this.refreshGradesButton.classList.add("actionButton", "c2sButton")
-        this.refreshGradesButton.textContent = "Refresh Grades For This Course"
-        this.wrapper.appendChild(this.refreshGradesButton)
-
-        this.loading = new Loading(27.5, this.wrapper)
+        this.refreshGradesButton.classList.add("reloadButton", "c2sButton")
+        this.refreshGradesButton.textContent = "Reload"
+        this.titleWrapper.appendChild(this.refreshGradesButton)
 
         this.refreshGradesButton.onclick = () => {
 
@@ -833,6 +919,72 @@ class CourseSection extends Section {
         this.loadingBar.wrapper.style.display = "none"
         this.loadingBar.updateStatus(0)
 
+        let downloadTitle = document.createElement("h3")
+        downloadTitle.style.marginTop = "20px"
+        downloadTitle.style.marginRight = "20px"
+        downloadTitle.style.paddingBottom = "10px"
+        downloadTitle.style.borderBottomStyle = "dashed"
+        downloadTitle.style.borderColor = "gray"
+        downloadTitle.textContent = "Download Exports"
+        this.wrapper.appendChild(downloadTitle)
+        this.courseElements.push(downloadTitle)
+
+        if (this.sections.length > 0) this.infos.push(new Info(20, "Click buttons below to download grade transfer files for each course section", downloadTitle))
+
+        for (let i = 0; i < this.sections.length; i++) { // create a button for each canvas course section
+
+            let downloadFileButton = document.createElement("button")
+            downloadFileButton.classList.add("actionButton", "c2sButton")
+            downloadFileButton.style.marginTop = "10px"
+            downloadFileButton.innerHTML = `<i class="icon-download" aria-hidden="true"></i>` + " " + this.sections[i].name
+            downloadFileButton.title = "Download Synergy import file"
+            this.wrapper.appendChild(downloadFileButton)
+            this.courseElements.push(downloadFileButton)
+
+            let lineBreak = document.createElement("br")
+            this.wrapper.appendChild(lineBreak)
+            this.courseElements.push(lineBreak)
+
+            downloadFileButton.onclick = () => { // download synergy import file (a .xls file with grades for this section)
+                this.convertGrades()
+                saveCourses()
+                console.log(this.sections[i].name)
+                console.log(this.convertedGrades[this.sections[i].name])
+
+                // make .xls file from grades of this section
+
+                let currentGradesJSON = this.convertedGrades[this.sections[i].name]
+
+                let tableXML = `<thead valign = "top">`
+                tableXML += "<tr>"
+                for (let columnName in currentGradesJSON[0]) tableXML += "<th>" + columnName + "</th>"
+                tableXML += "</tr></thead><tbody>"
+
+                for (let i = 0; i < currentGradesJSON.length; i++) {
+                    tableXML += "<tr>"
+                    for (let columnName in currentGradesJSON[i]) {
+                        tableXML += "<td>" + currentGradesJSON[i][columnName] + "</td>"
+                    }
+                    tableXML += "</tr>"
+                }
+
+                tableXML += "</tbody>"
+
+                tableXML = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40"><head><!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet><x:Name>{worksheet}</x:Name><x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions></x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]--><meta http-equiv="content-type" content="text/plain; charset=UTF-8"/></head><body><table>${tableXML}</table></body></html>`
+
+                let gradesBlob = new Blob([tableXML], {type: "application/vnd.ms-excel"}) // create blob out of tableXML
+                // download the file as "canvas section name.xls"
+                let url = URL.createObjectURL(gradesBlob)
+                let a = document.createElement("a")
+                document.body.appendChild(a)
+                a.href = url
+                a.download = this.sections[i].name + ".xls"
+                a.click()
+                window.setTimeout(() => {URL.revokeObjectURL(url)}, 0)
+                
+            }
+        }
+
         let exportSettingsTitle = document.createElement("h3")
         exportSettingsTitle.style.marginTop = "20px"
         exportSettingsTitle.style.marginRight = "20px"
@@ -848,7 +1000,7 @@ class CourseSection extends Section {
         Select whether or not you would like unscored assignments to show up in your students' gradebooks<br><br>
         Select students to exclude from the transfer`, exportSettingsTitle))
 
-        if (this.assignmentGroups.length != 0) {
+        if (!settingsSection.preferences.transferOverallGrades) {
 
             if (types.length > 0) {
                 let typeSelectorWrapper = document.createElement("div")
@@ -967,19 +1119,24 @@ class CourseSection extends Section {
                 }
             }
 
+            let preferencesWrapper = document.createElement("div")
+            preferencesWrapper.style.width = "475px"
+            preferencesWrapper.style.marginTop = "10px"
+            preferencesWrapper.style.borderTopStyle = "dotted"
+            preferencesWrapper.style.borderTopColor = "darkgray"
+            this.wrapper.appendChild(preferencesWrapper)
+            this.courseElements.push(preferencesWrapper)
+
 
             let sowsCheckbox = document.createElement("input")
             sowsCheckbox.type = "checkbox"
-            sowsCheckbox.style.margin = "20px 15px 20px 10px"
+            sowsCheckbox.style.margin = "15px 15px 20px 10px"
             sowsCheckbox.checked = this.sows
-            this.wrapper.appendChild(sowsCheckbox)
-            this.courseElements.push(sowsCheckbox)
+            preferencesWrapper.appendChild(sowsCheckbox)
 
             let sowsLabel = document.createElement("span")
-            sowsLabel.style.height = "20px"
             sowsLabel.innerHTML = "Show Only When Scored<br>"
-            this.wrapper.appendChild(sowsLabel)
-            this.courseElements.push(sowsLabel)
+            preferencesWrapper.appendChild(sowsLabel)
 
             sowsCheckbox.onclick = () => {
                 this.sows = sowsCheckbox.checked
@@ -987,205 +1144,149 @@ class CourseSection extends Section {
                 this.makeTypeMatchers()
                 saveCourses()
             }
-
-            let ignoreStudentsListWrapper = document.createElement("div")
-            this.wrapper.appendChild(ignoreStudentsListWrapper)
-            this.courseElements.push(ignoreStudentsListWrapper)
-            
-            let ignoreStudentsTitle = document.createElement("i")
-            ignoreStudentsTitle.style.color = "gray"
-            ignoreStudentsTitle.textContent = "Select students to be excluded from export (Ctrl + click)"
-            ignoreStudentsListWrapper.appendChild(ignoreStudentsTitle)
-
-            ignoreStudentsListWrapper.appendChild(document.createElement("br"))
-
-            let ignoreStudentsList = document.createElement("select")
-            ignoreStudentsList.classList.add("ignoreStudentsList")
-            ignoreStudentsList.style.height = "150px"
-            ignoreStudentsList.multiple = true
-            ignoreStudentsListWrapper.appendChild(ignoreStudentsList)
-
-            for (let i = 0; i < this.sections.length; i++) {
-                if (this.sections[i].students != null) for (let j = 0; j < this.sections[i].students.length; j++) {
-                    let option = document.createElement("option")
-                    option.value = this.sections[i].students[j].sis_user_id
-                    option.textContent = this.sections[i].students[j].sortable_name
-                    
-                    for (let k = 0; k < this.studentsToIgnore.length; k++) if (this.sections[i].students[j].sis_user_id == this.studentsToIgnore[k]) option.selected = true
-
-                    ignoreStudentsList.appendChild(option)
-                }
-            }
-
-            ignoreStudentsListWrapper.appendChild(document.createElement("br"))
-
-            ignoreStudentsList.onchange = () => {
-                this.studentsToIgnore = []
-                for (let i in ignoreStudentsList.options) {
-                    if (ignoreStudentsList.options[i].selected) this.studentsToIgnore.push(ignoreStudentsList.options[i].value)
-                }
-                this.convertGrades()
-                this.makeTypeMatchers()
-                saveCourses()
-            }
             
         }
 
+        let ignoreStudentsListWrapper = document.createElement("div")
+        this.wrapper.appendChild(ignoreStudentsListWrapper)
+        this.courseElements.push(ignoreStudentsListWrapper)
+        
+        let ignoreStudentsTitle = document.createElement("i")
+        ignoreStudentsTitle.style.color = "gray"
+        ignoreStudentsTitle.style.marginBottom = "10px"
+        ignoreStudentsTitle.style.paddingBottom = "10px"
+        ignoreStudentsTitle.style.borderBottomStyle = "dotted"
+        ignoreStudentsTitle.style.borderBottomColor = "darkgray"
+        ignoreStudentsTitle.textContent = "Select Students To Be Excluded From Export (Ctrl + click)"
+        ignoreStudentsListWrapper.appendChild(ignoreStudentsTitle)
 
-        let downloadTitle = document.createElement("h3")
-        downloadTitle.style.marginTop = "20px"
-        downloadTitle.style.marginRight = "20px"
-        downloadTitle.style.paddingBottom = "10px"
-        downloadTitle.style.borderBottomStyle = "dashed"
-        downloadTitle.style.borderColor = "gray"
-        downloadTitle.textContent = "Download Exports"
-        this.wrapper.appendChild(downloadTitle)
-        this.courseElements.push(downloadTitle)
+        ignoreStudentsListWrapper.appendChild(document.createElement("br"))
 
-        if (this.sections.length > 0) this.infos.push(new Info(20, "Click buttons below to download grade transfer files for each course section", downloadTitle))
 
-        for (let i = 0; i < this.sections.length; i++) { // create a button for each canvas course section
+        let ignoreStudentsList = document.createElement("select")
+        ignoreStudentsList.classList.add("ignoreStudentsList")
+        ignoreStudentsList.style.height = "150px"
+        ignoreStudentsList.style.marginTop = "20px"
+        ignoreStudentsList.multiple = true
+        ignoreStudentsListWrapper.appendChild(ignoreStudentsList)
 
-            let downloadFileButton = document.createElement("button")
-            downloadFileButton.classList.add("actionButton", "c2sButton")
-            downloadFileButton.style.marginTop = "10px"
-            downloadFileButton.textContent = "Download " + this.sections[i].name
-            downloadFileButton.title = "Download Synergy import file"
-            this.wrapper.appendChild(downloadFileButton)
-            this.courseElements.push(downloadFileButton)
+        for (let i = 0; i < this.sections.length; i++) {
+            if (this.sections[i].students != null) for (let j = 0; j < this.sections[i].students.length; j++) {
+                let option = document.createElement("option")
+                option.value = this.sections[i].students[j].sis_user_id
+                option.textContent = this.sections[i].students[j].sortable_name
+                
+                for (let k = 0; k < this.studentsToIgnore.length; k++) if (this.sections[i].students[j].sis_user_id == this.studentsToIgnore[k]) option.selected = true
 
-            let lineBreak = document.createElement("br")
-            this.wrapper.appendChild(lineBreak)
-            this.courseElements.push(lineBreak)
+                ignoreStudentsList.appendChild(option)
+            }
+        }
 
-            downloadFileButton.onclick = () => { // download synergy import file (a .xls file with grades for this section)
-                this.convertGrades()
-                saveCourses()
-                console.log(this.sections[i].name)
-                console.log(this.convertedGrades[this.sections[i].name])
+        ignoreStudentsListWrapper.appendChild(document.createElement("br"))
 
-                // make .xls file from grades of this section
+        ignoreStudentsList.onchange = () => {
+            this.studentsToIgnore = []
+            for (let i in ignoreStudentsList.options) {
+                if (ignoreStudentsList.options[i].selected) this.studentsToIgnore.push(ignoreStudentsList.options[i].value)
+            }
+            this.convertGrades()
+            this.makeTypeMatchers()
+            saveCourses()
+        }
 
-                let currentGradesJSON = this.convertedGrades[this.sections[i].name]
 
-                let tableXML = `<thead valign = "top">`
+        if (settingsSection.preferences.showPreviewExports) {
+            
+            let gradesPreviewTitle = document.createElement("h3")
+            gradesPreviewTitle.style.marginTop = "20px"
+            gradesPreviewTitle.style.marginRight = "20px"
+            gradesPreviewTitle.style.paddingBottom = "10px"
+            gradesPreviewTitle.style.borderBottomStyle = "dashed"
+            gradesPreviewTitle.style.borderColor = "gray"
+            gradesPreviewTitle.textContent = "Preview Exports"
+            this.wrapper.appendChild(gradesPreviewTitle)
+            this.courseElements.push(gradesPreviewTitle)
+
+
+            for (let section in this.convertedGrades) {
+                let sectionTitle = document.createElement("h4")
+                sectionTitle.style.marginTop = "15px"
+                sectionTitle.textContent = section
+                this.wrapper.appendChild(sectionTitle)
+                this.courseElements.push(sectionTitle)
+
+                let gradesPreviewTableWrapper = document.createElement("div")
+                gradesPreviewTableWrapper.style.maxHeight = "300px"
+                gradesPreviewTableWrapper.style.width = "1150px"
+                gradesPreviewTableWrapper.style.overflowY = "auto"
+                gradesPreviewTableWrapper.style.display = "none"
+                this.wrapper.appendChild(gradesPreviewTableWrapper)
+                this.courseElements.push(gradesPreviewTableWrapper)
+
+                let showTableButton = document.createElement("button")
+                showTableButton.classList.add("c2sButton", "actionButton")
+                showTableButton.style.marginLeft = "10px"
+                showTableButton.style.padding = "5px 8px 5px 8px"
+                showTableButton.textContent = "Show"
+                sectionTitle.appendChild(showTableButton)
+                showTableButton.onclick = () => {
+                    if (gradesPreviewTableWrapper.style.display == "none") {
+                        gradesPreviewTableWrapper.style.display = "block"
+                        showTableButton.textContent = "Hide"
+                    }
+                    else {
+                        gradesPreviewTableWrapper.style.display = "none"
+                        showTableButton.textContent = "Show"
+                    }
+                }
+
+                let currentGradesJSON = this.convertedGrades[section]
+                
+                let tableXML = `<thead valign = "top" style = "background-color: var(--ic-brand-button--primary-bgd); color: white;">`
                 tableXML += "<tr>"
-                for (let columnName in currentGradesJSON[0]) tableXML += "<th>" + columnName + "</th>"
+                for (let columnName in currentGradesJSON[0]) if (
+                    columnName == "STUDENT_LAST_NAME" || 
+                    columnName == "STUDENT_FIRST_NAME" || 
+                    columnName == "ASSIGNMENT_NAME" || 
+                    columnName == "OVERALL_SCORE" ||
+                    columnName == "MAX_SCORE" ||
+                    columnName == "ASSIGNMENT_TYPE" ||
+                    columnName == "EXCUSED"
+                ) tableXML += `<th style = "border: 1px solid var(--ic-brand-button--primary-bgd);">` + columnName + "</th>"
                 tableXML += "</tr></thead><tbody>"
 
                 for (let i = 0; i < currentGradesJSON.length; i++) {
                     tableXML += "<tr>"
                     for (let columnName in currentGradesJSON[i]) {
-                        tableXML += "<td>" + currentGradesJSON[i][columnName] + "</td>"
+                        if (
+                            columnName == "STUDENT_LAST_NAME" || 
+                            columnName == "STUDENT_FIRST_NAME" || 
+                            columnName == "OVERALL_SCORE" ||
+                            columnName == "MAX_SCORE" ||
+                            columnName == "ASSIGNMENT_TYPE" ||
+                            columnName == "EXCUSED"
+                        ) tableXML += `<td style = "border: 1px dashed darkgray;">` + currentGradesJSON[i][columnName] + "</td>"
+
+                        else if (columnName == "ASSIGNMENT_NAME") {
+                            tableXML += `<td style = "border: 1px dashed darkgray;"><a href = "` + currentGradesJSON[i]["ASSIGNMENT_DESCRIPTION"].slice(12) + `" target = "_blank">` + currentGradesJSON[i][columnName] + "</a></td>"
+                        }
                     }
                     tableXML += "</tr>"
                 }
 
                 tableXML += "</tbody>"
 
-                tableXML = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40"><head><!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet><x:Name>{worksheet}</x:Name><x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions></x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]--><meta http-equiv="content-type" content="text/plain; charset=UTF-8"/></head><body><table>${tableXML}</table></body></html>`
-
-                let gradesBlob = new Blob([tableXML], {type: "application/vnd.ms-excel"}) // create blob out of tableXML
-                // download the file as "canvas section name.xls"
-                let url = URL.createObjectURL(gradesBlob)
-                let a = document.createElement("a")
-                document.body.appendChild(a)
-                a.href = url
-                a.download = this.sections[i].name + ".xls"
-                a.click()
-                window.setTimeout(() => {URL.revokeObjectURL(url)}, 0)
+                let sectionTable = document.createElement("table")
+                sectionTable.style.width = "1150px"
+                sectionTable.style.borderSpacing = "5px"
+                sectionTable.style.fontSize = "15px"
+                sectionTable.innerHTML = tableXML
+                gradesPreviewTableWrapper.appendChild(sectionTable)
+                this.courseElements.push(sectionTable)
                 
-            }
-        }
 
-
-        let gradesPreviewTitle = document.createElement("h3")
-        gradesPreviewTitle.style.marginTop = "20px"
-        gradesPreviewTitle.style.marginRight = "20px"
-        gradesPreviewTitle.style.paddingBottom = "10px"
-        gradesPreviewTitle.style.borderBottomStyle = "dashed"
-        gradesPreviewTitle.style.borderColor = "gray"
-        gradesPreviewTitle.textContent = "Preview Exports"
-        this.wrapper.appendChild(gradesPreviewTitle)
-        this.courseElements.push(gradesPreviewTitle)
-
-
-        for (let section in this.convertedGrades) {
-            let sectionTitle = document.createElement("h4")
-            sectionTitle.style.marginTop = "15px"
-            sectionTitle.textContent = section
-            this.wrapper.appendChild(sectionTitle)
-            this.courseElements.push(sectionTitle)
-
-            let gradesPreviewTableWrapper = document.createElement("div")
-            gradesPreviewTableWrapper.style.maxHeight = "300px"
-            gradesPreviewTableWrapper.style.width = "1150px"
-            gradesPreviewTableWrapper.style.overflowY = "auto"
-            gradesPreviewTableWrapper.style.display = "none"
-            this.wrapper.appendChild(gradesPreviewTableWrapper)
-            this.courseElements.push(gradesPreviewTableWrapper)
-
-            let showTableButton = document.createElement("button")
-            showTableButton.classList.add("c2sButton", "actionButton")
-            showTableButton.style.marginLeft = "10px"
-            showTableButton.style.padding = "5px 8px 5px 8px"
-            showTableButton.textContent = "Show"
-            sectionTitle.appendChild(showTableButton)
-            showTableButton.onclick = () => {
-                if (gradesPreviewTableWrapper.style.display == "none") {
-                    gradesPreviewTableWrapper.style.display = "block"
-                    showTableButton.textContent = "Hide"
-                }
-                else {
-                    gradesPreviewTableWrapper.style.display = "none"
-                    showTableButton.textContent = "Show"
-                }
             }
 
-            let currentGradesJSON = this.convertedGrades[section]
-            
-            let tableXML = `<thead valign = "top" style = "background-color: var(--ic-brand-button--primary-bgd); color: white;">`
-            tableXML += "<tr>"
-            for (let columnName in currentGradesJSON[0]) if (
-                columnName == "STUDENT_LAST_NAME" || 
-                columnName == "STUDENT_FIRST_NAME" || 
-                columnName == "ASSIGNMENT_NAME" || 
-                columnName == "OVERALL_SCORE" ||
-                columnName == "MAX_SCORE" ||
-                columnName == "ASSIGNMENT_TYPE" ||
-                columnName == "EXCUSED"
-            ) tableXML += `<th style = "border: 1px solid var(--ic-brand-button--primary-bgd);">` + columnName + "</th>"
-            tableXML += "</tr></thead><tbody>"
-
-            for (let i = 0; i < currentGradesJSON.length; i++) {
-                tableXML += "<tr>"
-                for (let columnName in currentGradesJSON[i]) {
-                    if (
-                        columnName == "STUDENT_LAST_NAME" || 
-                        columnName == "STUDENT_FIRST_NAME" || 
-                        columnName == "OVERALL_SCORE" ||
-                        columnName == "MAX_SCORE" ||
-                        columnName == "ASSIGNMENT_TYPE" ||
-                        columnName == "EXCUSED"
-                    ) tableXML += `<td style = "border: 1px dashed darkgray;">` + currentGradesJSON[i][columnName] + "</td>"
-
-                    else if (columnName == "ASSIGNMENT_NAME") {
-                        tableXML += `<td style = "border: 1px dashed darkgray;"><a href = "` + currentGradesJSON[i]["ASSIGNMENT_DESCRIPTION"].slice(12) + `" target = "_blank">` + currentGradesJSON[i][columnName] + "</a></td>"
-                    }
-                }
-                tableXML += "</tr>"
-            }
-
-            tableXML += "</tbody>"
-
-            let sectionTable = document.createElement("table")
-            sectionTable.style.width = "1150px"
-            sectionTable.style.borderSpacing = "5px"
-            sectionTable.style.fontSize = "15px"
-            sectionTable.innerHTML = tableXML
-            gradesPreviewTableWrapper.appendChild(sectionTable)
-            this.courseElements.push(sectionTable)
-            
 
         }
 
@@ -1197,8 +1298,7 @@ class CourseSection extends Section {
     fetchGrades() {
     
         this.fetched = true
-        this.refreshGradesButton.disabled = true
-        this.loading.startLoading()
+        this.refreshGradesButton.style.display = "none"
 
         this.loadingBar.wrapper.style.display = "block"
         this.loadedValue = 0
@@ -1216,6 +1316,10 @@ class CourseSection extends Section {
 
             this.loadedValue += .1
             this.loadingBar.updateStatus(this.loadedValue)
+            
+            this.convertGrades()
+            this.makeTypeMatchers()
+            saveCourses()
         })
 
         getDataAsync(["courses", this.id, "assignments", "?include[]=all_dates"], accessToken).then((assignments) => {
@@ -1251,9 +1355,8 @@ class CourseSection extends Section {
                 this.makeTypeMatchers()
                 saveCourses()
 
-                this.refreshGradesButton.disabled = false
+                this.refreshGradesButton.style.display = ""
 
-                this.loading.endAnimation(this.loading)
             }
 
             var assignmentScores = []
@@ -1289,9 +1392,8 @@ class CourseSection extends Section {
                             this.makeTypeMatchers()
                             saveCourses()
 
-                            this.refreshGradesButton.disabled = false
+                            this.refreshGradesButton.style.display = ""
 
-                            this.loading.endAnimation(this.loading)
                         }
                     })
                 }, i * 150)

@@ -49,16 +49,18 @@
 }
 
 
-.addedButton {
+.reloadButton {
+    padding: 5px 8px 5px 8px;
+
     color: white;
     transition: background-color .25s;
-    background-color: var(--fOyUs-backgroundSuccess);
+    background-color: #0B874B;
     border: 1px solid;
-    border-color: var(--fOyUs-borderColorSuccess);
+    border-color: #0B874B;
 }
 
 .addedButton:hover {
-    background-color: var(--fOyUs-focusColorSuccess);
+    background-color: #0B874B;
 }
 
 
