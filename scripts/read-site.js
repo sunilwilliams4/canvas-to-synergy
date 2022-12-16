@@ -681,24 +681,47 @@ class SettingsSection extends Section {
         transferOverallGradesLabel.innerHTML = "Transfer Overall Grades<br>"
         this.wrapper.appendChild(transferOverallGradesLabel)
 
+        let transferOverallGradesBlurb = document.createElement("i")
+        transferOverallGradesBlurb.style.color = "gray"
+        transferOverallGradesBlurb.style.display = "none"
+        transferOverallGradesBlurb.textContent = `You must create a new assignment type in Synergy called "Canvas" with 100% weighting before transfering grades with this feature`
+        this.wrapper.appendChild(transferOverallGradesBlurb)
+
+        let copyAssignmentTypeButton = document.createElement("button")
+        copyAssignmentTypeButton.classList.add("c2sButton", "actionButton")
+        copyAssignmentTypeButton.style.padding = "5px 8px 5px 8px"
+        copyAssignmentTypeButton.textContent = "Copy Assignment Type"
+        this.wrapper.appendChild(copyAssignmentTypeButton)
+        copyAssignmentTypeButton.onclick = () => {
+            navigator.clipboard.writeText("Canvas")
+            copyAssignmentTypeButton.textContent = "Copied"
+            copyAssignmentTypeButton.style.backgroundColor = "green"
+            copyAssignmentTypeButton.style.borderColor = "green"
+            window.setTimeout(() => {
+                copyAssignmentTypeButton.textContent = "Copy Assignment Type"
+                copyAssignmentTypeButton.style.backgroundColor = ""
+                copyAssignmentTypeButton.style.borderColor = ""
+            }, 2000)
+        }
+
+
         transferOverallGradesToggle.onchange = () => {
             this.preferences.transferOverallGrades = transferOverallGradesToggle.checked
             this.savePreferences()
-            if (this.preferences.transferOverallGrades) transferOverallGradesBlurb.style.display = "block"
-            else transferOverallGradesBlurb.style.display = "none"
+            if (this.preferences.transferOverallGrades) {
+                transferOverallGradesBlurb.style.display = "block"
+                copyAssignmentTypeButton.style.display = "block"
+            }
+            else {
+                transferOverallGradesBlurb.style.display = "none"
+                copyAssignmentTypeButton.style.display = "none"
+            }
             for (let i in courseSections) {
                 courseSections[i].fetched = false
                 courseSections[i].makeTypeMatchers()
             }
             
         }
-        let transferOverallGradesBlurb = document.createElement("i")
-        transferOverallGradesBlurb.style.color = "gray"
-        transferOverallGradesBlurb.style.display = "none"
-        transferOverallGradesBlurb.textContent = `Before transfering grades with this feature, you must create a new assignment type in Synergy called "Canvas" with 100% weighting`
-        this.wrapper.appendChild(transferOverallGradesBlurb)
-
-
         
         chrome.storage.local.get(["preferences"], (result) => {
 
@@ -710,6 +733,7 @@ class SettingsSection extends Section {
             transferOverallGradesToggle.checked = this.preferences.transferOverallGrades
             if (this.preferences.transferOverallGrades) {
                 transferOverallGradesBlurb.style.display = "block"
+                copyAssignmentTypeButton.style.display = "block"
             }
         })
 
@@ -871,6 +895,7 @@ class CourseSection extends Section {
         this.sections = []
         this.assignments = []
         this.grades = []
+        this.overallStudentGrades = []
         this.assignmentGroups = []
         this.typeSelections = courseInfo.typeSelections || {}
         this.sows = courseInfo.sows || false
@@ -884,7 +909,7 @@ class CourseSection extends Section {
         
         this.refreshGradesButton = document.createElement("button")
         this.refreshGradesButton.classList.add("reloadButton", "c2sButton")
-        this.refreshGradesButton.textContent = "Reload"
+        this.refreshGradesButton.textContent = "Refresh"
         this.titleWrapper.appendChild(this.refreshGradesButton)
 
         this.refreshGradesButton.onclick = () => {
@@ -912,7 +937,10 @@ class CourseSection extends Section {
         for (let i in this.courseElements) this.courseElements[i].remove()
         for (let i in this.infos) this.infos[i].wrapper.remove()
 
-        if (this.assignmentGroups.length == 0 || this.assignments.length == 0 || this.sections.length == 0 || this.grades.length == 0) {
+        if (!settingsSection.preferences.transferOverallGrades && (this.assignmentGroups.length == 0 || this.assignments.length == 0 || this.sections.length == 0 || this.grades.length == 0)) {
+            return
+        }
+        if (settingsSection.preferences.transferOverallGrades && (this.sections.length == 0 || this.overallStudentGrades.length == 0)) {
             return
         }
 
@@ -1309,84 +1337,151 @@ class CourseSection extends Section {
         this.grades = []
 
         this.makeTypeMatchers()
-        
-        getDataAsync(["courses", this.id, "sections", "?include[]=students"], accessToken).then((sections) => {
-            this.sections = sections
-            console.log(sections)
-
-            this.loadedValue += .1
-            this.loadingBar.updateStatus(this.loadedValue)
+        if (!settingsSection.preferences.transferOverallGrades) {
             
-            this.convertGrades()
-            this.makeTypeMatchers()
-            saveCourses()
-        })
+            getDataAsync(["courses", this.id, "sections", "?include[]=students"], accessToken).then((sections) => {
+                this.sections = sections
+                console.log(sections)
 
-        getDataAsync(["courses", this.id, "assignments", "?include[]=all_dates"], accessToken).then((assignments) => {
-            console.log(assignments)
-            for (let i = assignments.length - 1; i >= 0; i--) if (!assignments[i].graded_submissions_exist) assignments.splice(i, 1)
-            let optimizedAssignments = []
-            for (let i = 0; i < assignments.length; i++) {
-                optimizedAssignments.push({
-                    assignment_group_id: assignments[i].assignment_group_id,
-                    all_dates: assignments[i].all_dates,
-                    created_at: assignments[i].created_at,
-                    name: assignments[i].name,
-                    html_url: assignments[i].html_url,
-                    points_possible: assignments[i].points_possible
-                })
-            }
-            this.assignments = optimizedAssignments
-            console.log(assignments)
-            this.loadedValue += .1
-            this.loadingBar.updateStatus(this.loadedValue)
-
-            console.log("loading grades")
-
-            if (assignments.length == 0) {
-                
-                this.loadedValue = 1
+                this.loadedValue += .1
                 this.loadingBar.updateStatus(this.loadedValue)
                 
-                this.grades = []
-                console.log("no graded assignments exist")
+                this.convertGrades()
+                this.makeTypeMatchers()
+                saveCourses()
+            })
 
+            getDataAsync(["courses", this.id, "assignments", "?include[]=all_dates"], accessToken).then((assignments) => {
+                console.log(assignments)
+                for (let i = assignments.length - 1; i >= 0; i--) if (!assignments[i].graded_submissions_exist) assignments.splice(i, 1)
+                let optimizedAssignments = []
+                for (let i = 0; i < assignments.length; i++) {
+                    optimizedAssignments.push({
+                        assignment_group_id: assignments[i].assignment_group_id,
+                        all_dates: assignments[i].all_dates,
+                        created_at: assignments[i].created_at,
+                        name: assignments[i].name,
+                        html_url: assignments[i].html_url,
+                        points_possible: assignments[i].points_possible
+                    })
+                }
+                this.assignments = optimizedAssignments
+                console.log(assignments)
+                this.loadedValue += .1
+                this.loadingBar.updateStatus(this.loadedValue)
+
+                console.log("loading grades")
+
+                if (assignments.length == 0) {
+                    
+                    this.loadedValue = 1
+                    this.loadingBar.updateStatus(this.loadedValue)
+                    
+                    this.grades = []
+                    console.log("no graded assignments exist")
+
+                    this.convertGrades()
+                    this.makeTypeMatchers()
+                    saveCourses()
+
+                    this.refreshGradesButton.style.display = ""
+
+                }
+
+                var assignmentScores = []
+                for (let i = 0; i < assignments.length; i++) {
+                    window.setTimeout(() => {
+                        getDataAsync(["courses", this.id, "assignments", assignments[i].id, "submissions"], accessToken).then((scores) => {
+                            assignmentScores[i] = scores
+                            this.loadedValue += .7 / assignments.length
+                            this.loadingBar.updateStatus(this.loadedValue)
+
+            
+                            let doneLoadingGrades = true
+                            for (let j = 0; j < assignments.length; j++) if (assignmentScores[j] == null) doneLoadingGrades = false
+                            if (doneLoadingGrades) {
+                                
+                                
+                                let optimizedGrades = []
+                                for (let k = 0; k < assignmentScores.length; k++) {
+                                    optimizedGrades.push([])
+                                    for (let l = 0; l < assignmentScores[k].length; l++) {
+                                        optimizedGrades[k].push({
+                                            user_id: assignmentScores[k][l].user_id,
+                                            score: assignmentScores[k][l].score,
+                                            excused: assignmentScores[k][l].excused
+                                        })
+                                    }
+                                }
+
+                                this.grades = optimizedGrades
+                                console.log(assignmentScores)
+
+                                this.convertGrades()
+                                this.makeTypeMatchers()
+                                saveCourses()
+
+                                this.refreshGradesButton.style.display = ""
+
+                            }
+                        })
+                    }, i * 150)
+                }
+                
+            })
+
+            getDataAsync(["courses", this.id, "assignment_groups"], accessToken).then((assignmentGroups) => {
+                this.assignmentGroups = assignmentGroups
+                console.log(assignmentGroups)
+
+                this.loadedValue += .1
+                this.loadingBar.updateStatus(this.loadedValue)
+
+                this.makeTypeMatchers()
+            })
+        } else {
+            
+            this.overallStudentGrades = []
+            getDataAsync(["courses", this.id, "sections", "?include[]=students"], accessToken).then((sections) => {
+                this.sections = sections
+                console.log(sections)
+
+                this.loadedValue += .1
+                this.loadingBar.updateStatus(this.loadedValue)
+                
                 this.convertGrades()
                 this.makeTypeMatchers()
                 saveCourses()
 
-                this.refreshGradesButton.style.display = ""
+                // get enrollments for each course
+                let enrollmentsBySection = []
+                for (let i = 0; i < this.sections.length; i++) {
+                    getDataAsync(["sections", this.sections[i].id, "enrollments"], accessToken).then((enrollments) => {
+                        console.log(enrollments)
 
-            }
-
-            var assignmentScores = []
-            for (let i = 0; i < assignments.length; i++) {
-                window.setTimeout(() => {
-                    getDataAsync(["courses", this.id, "assignments", assignments[i].id, "submissions"], accessToken).then((scores) => {
-                        assignmentScores[i] = scores
-                        this.loadedValue += .7 / assignments.length
+                        enrollmentsBySection[i] = enrollments
+                        this.loadedValue += .7 / this.sections.length
                         this.loadingBar.updateStatus(this.loadedValue)
 
-        
-                        let doneLoadingGrades = true
-                        for (let j = 0; j < assignments.length; j++) if (assignmentScores[j] == null) doneLoadingGrades = false
-                        if (doneLoadingGrades) {
+                        let doneLoadingEnrollments = true
+                        for (let j = 0; j < this.sections.length; j++) if (enrollmentsBySection[j] == null) doneLoadingEnrollments = false
+                        if (doneLoadingEnrollments) {
                             
-                            
-                            let optimizedGrades = []
-                            for (let k = 0; k < assignmentScores.length; k++) {
-                                optimizedGrades.push([])
-                                for (let l = 0; l < assignmentScores[k].length; l++) {
-                                    optimizedGrades[k].push({
-                                        user_id: assignmentScores[k][l].user_id,
-                                        score: assignmentScores[k][l].score,
-                                        excused: assignmentScores[k][l].excused
-                                    })
+                            this.overallStudentGrades = []
+                            for (let j = 0; j < this.sections.length; j++) {
+                                for (let k = 0; k < enrollmentsBySection[j].length; k++) {
+                                    if (enrollmentsBySection[j][k].type == "StudentEnrollment" && enrollmentsBySection[j][k].grades.current_score != undefined) {
+                                        this.overallStudentGrades.push({
+                                            user_id: enrollmentsBySection[j][k].user_id,
+                                            sis_user_id: enrollmentsBySection[j][k].sis_user_id,
+                                            sortable_name: enrollmentsBySection[j][k].user.sortable_name,
+                                            score: enrollmentsBySection[j][k].grades.current_score
+                                        })
+                                    }
                                 }
                             }
 
-                            this.grades = optimizedGrades
-                            console.log(assignmentScores)
+                            console.log(this.overallStudentGrades)
 
                             this.convertGrades()
                             this.makeTypeMatchers()
@@ -1396,20 +1491,19 @@ class CourseSection extends Section {
 
                         }
                     })
-                }, i * 150)
-            }
-            
-        })
+                }
+            })
 
-        getDataAsync(["courses", this.id, "assignment_groups"], accessToken).then((assignmentGroups) => {
-            this.assignmentGroups = assignmentGroups
-            console.log(assignmentGroups)
+            getDataAsync(["courses", this.id, "assignment_groups"], accessToken).then((assignmentGroups) => {
+                this.assignmentGroups = assignmentGroups
+                console.log(assignmentGroups)
 
-            this.loadedValue += .1
-            this.loadingBar.updateStatus(this.loadedValue)
+                this.loadedValue += .1
+                this.loadingBar.updateStatus(this.loadedValue)
 
-            this.makeTypeMatchers()
-        })
+                this.makeTypeMatchers()
+            })
+        }
     }
 
 
@@ -1433,55 +1527,82 @@ class CourseSection extends Section {
                 for (let m = 0; m < this.studentsToIgnore.length; m++) if (Number(currentStudent.sis_user_id) == this.studentsToIgnore[m]) ignore = true
                 if (ignore) continue
 
-                for (let k = 0; k < this.grades.length; k++) if (this.assignments[k] != null) {
-                    let currentAssignmentType
-                    for (let l = 0; l < this.assignmentGroups.length; l++) if (this.assignments[k].assignment_group_id == this.assignmentGroups[l].id) currentAssignmentType = this.typeSelections[this.assignmentGroups[l].name]
-                    let submissionFound = false
-                    let currentScore = null
-                    let currentExcused = false
-                    for (let l = 0; l < this.grades[k].length; l++) {
-                        if (this.grades[k][l].user_id == currentStudent.id) {
-                            submissionFound = true
-                            currentScore = this.grades[k][l].score
-                            currentExcused = this.grades[k][l].excused
+                if (!settingsSection.preferences.transferOverallGrades) {
+                        
+                    for (let k = 0; k < this.grades.length; k++) if (this.assignments[k] != null) {
+                        let currentAssignmentType
+                        for (let l = 0; l < this.assignmentGroups.length; l++) if (this.assignments[k].assignment_group_id == this.assignmentGroups[l].id) currentAssignmentType = this.typeSelections[this.assignmentGroups[l].name]
+                        let submissionFound = false
+                        let currentScore = null
+                        let currentExcused = false
+                        for (let l = 0; l < this.grades[k].length; l++) {
+                            if (this.grades[k][l].user_id == currentStudent.id) {
+                                submissionFound = true
+                                currentScore = this.grades[k][l].score
+                                currentExcused = this.grades[k][l].excused
+                            }
                         }
-                    }
-                    if (currentExcused == true) currentExcused = "True"
-                    else currentExcused = "False"
+                        if (currentExcused == true) currentExcused = "True"
+                        else currentExcused = "False"
 
-                    let currentDate = this.assignments[k].all_dates[0]
-                    for (let l = 0; l < this.assignments[k].all_dates.length; l++) {
-                        if (this.assignments[k].all_dates[l].title == currentSection) {
-                            currentDate = this.assignments[k].all_dates[l]
+                        let currentDate = this.assignments[k].all_dates[0]
+                        for (let l = 0; l < this.assignments[k].all_dates.length; l++) {
+                            if (this.assignments[k].all_dates[l].title == currentSection) {
+                                currentDate = this.assignments[k].all_dates[l]
+                            }
                         }
+
+                        let assignmentDate = filterDate(new Date(this.assignments[k].created_at))
+                        let dueDate = filterDate(new Date(currentDate.due_at))
+
+                        // add object to exportJSON containing grade on current assignment for current student
+                        if (submissionFound) exportJSON[currentSection].push({
+                            "STUDENT_PERM_ID": currentStudent.sis_user_id,
+                            "STUDENT_LAST_NAME": currentStudent.sortable_name.slice(0, currentStudent.sortable_name.indexOf(", ")),
+                            "STUDENT_FIRST_NAME": currentStudent.sortable_name.slice(currentStudent.sortable_name.indexOf(", ") + 2),
+                            "OVERALL_SCORE": (currentScore != null) ? currentScore : "",
+                            "ASSIGNMENT_NAME": this.assignments[k].name,
+                            "ASSIGNMENT_DESCRIPTION": "Canvas URL: " + this.assignments[k].html_url,
+                            "MAX_SCORE": this.assignments[k].points_possible,
+                            "POINTS": this.assignments[k].points_possible,
+                            "ASSIGNMENT_DATE": assignmentDate.toLocaleDateString(),
+                            "DUE_DATE": dueDate.toLocaleDateString(),
+                            "SCORE_TYPE": "Raw Score",
+                            "ASSIGNMENT_TYPE": currentAssignmentType,
+                            "EXCUSED": currentExcused,
+                            "SHOW_ONLY_WHEN_SCORED": this.sows
+                        })
                     }
-
-                    let assignmentDate = filterDate(new Date(this.assignments[k].created_at))
-                    let dueDate = filterDate(new Date(currentDate.due_at))
-
-                    // add object to exportJSON containing grade on current assignment for current student
-                    if (submissionFound) exportJSON[currentSection].push({
-                        "STUDENT_PERM_ID": currentStudent.sis_user_id,
-                        "STUDENT_LAST_NAME": currentStudent.sortable_name.slice(0, currentStudent.sortable_name.indexOf(", ")),
-                        "STUDENT_FIRST_NAME": currentStudent.sortable_name.slice(currentStudent.sortable_name.indexOf(", ") + 2),
-                        "OVERALL_SCORE": (currentScore != null) ? currentScore : "",
-                        "ASSIGNMENT_NAME": this.assignments[k].name,
-                        "ASSIGNMENT_DESCRIPTION": "Canvas URL: " + this.assignments[k].html_url,
-                        "MAX_SCORE": this.assignments[k].points_possible,
-                        "POINTS": this.assignments[k].points_possible,
-                        "ASSIGNMENT_DATE": assignmentDate.toLocaleDateString(),
-                        "DUE_DATE": dueDate.toLocaleDateString(),
-                        "SCORE_TYPE": "Raw Score",
-                        "ASSIGNMENT_TYPE": currentAssignmentType,
-                        "EXCUSED": currentExcused,
-                        "SHOW_ONLY_WHEN_SCORED": this.sows
-                    })
                 }
+                else {
+                    let currentDate = new Date(Date.now())
+                    for (let k = 0; k < this.overallStudentGrades.length; k++) if (this.overallStudentGrades[k].user_id == currentStudent.id) {
+                        exportJSON[currentSection].push({
+                            "STUDENT_PERM_ID": this.overallStudentGrades[k].sis_user_id,
+                            "STUDENT_LAST_NAME": this.overallStudentGrades[k].sortable_name.slice(0, this.overallStudentGrades[k].sortable_name.indexOf(", ")),
+                            "STUDENT_FIRST_NAME": this.overallStudentGrades[k].sortable_name.slice(this.overallStudentGrades[k].sortable_name.indexOf(", ") + 2),
+                            "OVERALL_SCORE": this.overallStudentGrades[k].score,
+                            "ASSIGNMENT_NAME": "Canvas Grade",
+                            "ASSIGNMENT_DESCRIPTION": "Overall student grade from Canvas",
+                            "MAX_SCORE": 100,
+                            "POINTS": 100,
+                            "ASSIGNMENT_DATE": currentDate.toLocaleDateString(),
+                            "DUE_DATE": currentDate.toLocaleDateString(),
+                            "SCORE_TYPE": "Raw Score",
+                            "ASSIGNMENT_TYPE": "Canvas",
+                            "EXCUSED": false,
+                            "SHOW_ONLY_WHEN_SCORED": false
+                        })
+                    }
+                }
+
             }
         }
 
         this.convertedGrades = exportJSON
     }
+
+    
 
 
     open() {
