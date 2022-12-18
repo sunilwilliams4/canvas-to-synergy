@@ -623,11 +623,11 @@ class SettingsSection extends Section {
             fileReader.onload = () => {
                 let massImport = XLSX.read(fileReader.result, {type: "binary"})
                 let typeSheet = massImport.Sheets["Instructions"]
-                console.log(typeSheet)
         
                 types = []
                 for (let row in typeSheet) if (row.indexOf("B") != -1) types.push(typeSheet[row].h)
                 types.splice(0, 3)
+                console.log("uploaded types", types)
 
                 for (let i = 0; i < courseSections.length; i++) courseSections[i].makeTypeMatchers()
         
@@ -726,8 +726,6 @@ class SettingsSection extends Section {
         chrome.storage.local.get(["preferences"], (result) => {
 
             if (result.preferences != null) this.preferences = JSON.parse(result.preferences)
-
-            console.log(result)
 
             showPreviewExportsToggle.checked = this.preferences.showPreviewExports
             transferOverallGradesToggle.checked = this.preferences.transferOverallGrades
@@ -901,8 +899,7 @@ class CourseSection extends Section {
             downloadFileButton.onclick = () => { // download synergy import file (a .xls file with grades for this section)
                 this.convertGrades()
                 saveCourses()
-                console.log(this.sections[i].name)
-                console.log(this.convertedGrades[this.sections[i].name])
+                console.log(this.sections[i].name, this.convertedGrades[this.sections[i].name])
 
                 // make .xls file from grades of this section
 
@@ -1057,11 +1054,11 @@ class CourseSection extends Section {
                     fileReader.onload = () => {
                         let massImport = XLSX.read(fileReader.result, {type: "binary"})
                         let typeSheet = massImport.Sheets["Instructions"]
-                        console.log(typeSheet)
                 
                         types = []
                         for (let row in typeSheet) if (row.indexOf("B") != -1) types.push(typeSheet[row].h)
                         types.splice(0, 3)
+                        console.log("uploaded types", types)
 
                         for (let i = 0; i < courseSections.length; i++) courseSections[i].makeTypeMatchers()
                 
@@ -1101,6 +1098,7 @@ class CourseSection extends Section {
         }
 
         let ignoreStudentsListWrapper = document.createElement("div")
+        ignoreStudentsListWrapper.style.marginBottom = "10px"
         this.wrapper.appendChild(ignoreStudentsListWrapper)
         this.courseElements.push(ignoreStudentsListWrapper)
         
@@ -1137,7 +1135,13 @@ class CourseSection extends Section {
 
         ignoreStudentsListWrapper.appendChild(document.createElement("br"))
 
-        ignoreStudentsList.onchange = () => {
+        let clearSelectionButton = document.createElement("button")
+        clearSelectionButton.classList.add("c2sButton", "actionButton")
+        clearSelectionButton.style.padding = "5px 8px 5px 8px"
+        clearSelectionButton.textContent = "Clear Selection"
+        ignoreStudentsListWrapper.appendChild(clearSelectionButton)
+
+        let updateStudentsToIgnore = () => {
             this.studentsToIgnore = []
             for (let i in ignoreStudentsList.options) {
                 if (ignoreStudentsList.options[i].selected) this.studentsToIgnore.push(ignoreStudentsList.options[i].value)
@@ -1146,6 +1150,16 @@ class CourseSection extends Section {
             this.makeTypeMatchers()
             saveCourses()
         }
+
+        clearSelectionButton.onclick = () => {
+            for (let i in ignoreStudentsList.options) {
+                try {ignoreStudentsList.options[i].selected = false}
+                catch {}
+            }
+            updateStudentsToIgnore()
+        }
+
+        ignoreStudentsList.onchange = updateStudentsToIgnore
 
 
         if (settingsSection.preferences.showPreviewExports) {
@@ -1169,7 +1183,6 @@ class CourseSection extends Section {
                 this.courseElements.push(sectionTitle)
 
                 let gradesPreviewTableWrapper = document.createElement("div")
-                gradesPreviewTableWrapper.style.maxHeight = "300px"
                 gradesPreviewTableWrapper.style.width = "1150px"
                 gradesPreviewTableWrapper.style.overflowY = "auto"
                 gradesPreviewTableWrapper.style.display = "none"
@@ -1186,6 +1199,8 @@ class CourseSection extends Section {
                     if (gradesPreviewTableWrapper.style.display == "none") {
                         gradesPreviewTableWrapper.style.display = "block"
                         showTableButton.textContent = "Hide"
+
+                        gradesPreviewTableWrapper.scrollIntoView({behavior: "smooth"})
                     }
                     else {
                         gradesPreviewTableWrapper.style.display = "none"
@@ -1221,7 +1236,8 @@ class CourseSection extends Section {
                         ) tableXML += `<td style = "border: 1px dashed darkgray;">` + currentGradesJSON[i][columnName] + "</td>"
 
                         else if (columnName == "ASSIGNMENT_NAME") {
-                            tableXML += `<td style = "border: 1px dashed darkgray;"><a href = "` + currentGradesJSON[i]["ASSIGNMENT_DESCRIPTION"].slice(12) + `" target = "_blank">` + currentGradesJSON[i][columnName] + "</a></td>"
+                            if (!settingsSection.preferences.transferOverallGrades) tableXML += `<td style = "border: 1px dashed darkgray;"><a href = "${currentGradesJSON[i]["ASSIGNMENT_DESCRIPTION"].slice(12)}" target = "_blank">${currentGradesJSON[i][columnName]}</a></td>`
+                            else tableXML += `<td style = "border: 1px dashed darkgray;">${currentGradesJSON[i][columnName]}</td>`
                         }
                     }
                     tableXML += "</tr>"
@@ -1266,7 +1282,7 @@ class CourseSection extends Section {
             
             getDataAsync(["courses", this.id, "sections", "?include[]=students"]).then((sections) => {
                 this.sections = sections
-                console.log(sections)
+                console.log("sections", sections)
 
                 this.loadedValue += .1
                 this.loadingBar.updateStatus(this.loadedValue)
@@ -1277,7 +1293,7 @@ class CourseSection extends Section {
             })
 
             getDataAsync(["courses", this.id, "assignments", "?include[]=all_dates"]).then((assignments) => {
-                console.log(assignments)
+                console.log("assignments", assignments)
                 for (let i = assignments.length - 1; i >= 0; i--) if (!assignments[i].graded_submissions_exist) assignments.splice(i, 1)
                 let optimizedAssignments = []
                 for (let i = 0; i < assignments.length; i++) {
@@ -1291,11 +1307,9 @@ class CourseSection extends Section {
                     })
                 }
                 this.assignments = optimizedAssignments
-                console.log(assignments)
+                console.log("optimized assignments", optimizedAssignments)
                 this.loadedValue += .1
                 this.loadingBar.updateStatus(this.loadedValue)
-
-                console.log("loading grades")
 
                 if (assignments.length == 0) {
                     
@@ -1340,7 +1354,7 @@ class CourseSection extends Section {
                                 }
 
                                 this.grades = optimizedGrades
-                                console.log(assignmentScores)
+                                console.log("assignment scores", assignmentScores)
 
                                 this.convertGrades()
                                 this.makeTypeMatchers()
@@ -1357,7 +1371,7 @@ class CourseSection extends Section {
 
             getDataAsync(["courses", this.id, "assignment_groups"]).then((assignmentGroups) => {
                 this.assignmentGroups = assignmentGroups
-                console.log(assignmentGroups)
+                console.log("assignment groups", assignmentGroups)
 
                 this.loadedValue += .1
                 this.loadingBar.updateStatus(this.loadedValue)
@@ -1369,7 +1383,7 @@ class CourseSection extends Section {
             this.overallStudentGrades = []
             getDataAsync(["courses", this.id, "sections", "?include[]=students"]).then((sections) => {
                 this.sections = sections
-                console.log(sections)
+                console.log("sections", sections)
 
                 this.loadedValue += .1
                 this.loadingBar.updateStatus(this.loadedValue)
@@ -1378,14 +1392,14 @@ class CourseSection extends Section {
                 this.makeTypeMatchers()
                 saveCourses()
 
-                // get enrollments for each course
+                // get enrollments for each section
                 let enrollmentsBySection = []
                 for (let i = 0; i < this.sections.length; i++) {
                     getDataAsync(["sections", this.sections[i].id, "enrollments"]).then((enrollments) => {
-                        console.log(enrollments)
+                        console.log("enrollments for " + this.sections[i].name, enrollments)
 
                         enrollmentsBySection[i] = enrollments
-                        this.loadedValue += .7 / this.sections.length
+                        this.loadedValue += .8 / this.sections.length
                         this.loadingBar.updateStatus(this.loadedValue)
 
                         let doneLoadingEnrollments = true
@@ -1397,7 +1411,6 @@ class CourseSection extends Section {
                                 for (let k = 0; k < enrollmentsBySection[j].length; k++) {
                                     if (enrollmentsBySection[j][k].type == "StudentEnrollment" && enrollmentsBySection[j][k].grades.current_score != undefined) {
                                         this.overallStudentGrades.push({
-                                            user_id: enrollmentsBySection[j][k].user_id,
                                             sis_user_id: enrollmentsBySection[j][k].sis_user_id,
                                             sortable_name: enrollmentsBySection[j][k].user.sortable_name,
                                             score: enrollmentsBySection[j][k].grades.current_score
@@ -1406,7 +1419,7 @@ class CourseSection extends Section {
                                 }
                             }
 
-                            console.log(this.overallStudentGrades)
+                            console.log("overall student grades", this.overallStudentGrades)
 
                             this.convertGrades()
                             this.makeTypeMatchers()
@@ -1421,7 +1434,7 @@ class CourseSection extends Section {
 
             getDataAsync(["courses", this.id, "assignment_groups"]).then((assignmentGroups) => {
                 this.assignmentGroups = assignmentGroups
-                console.log(assignmentGroups)
+                console.log("assignment groups", assignmentGroups)
 
                 this.loadedValue += .1
                 this.loadingBar.updateStatus(this.loadedValue)
@@ -1437,8 +1450,6 @@ class CourseSection extends Section {
         // if any data is missing, return
         if (this.sections == null || this.sections == [] || this.assignments == null || this.assignments == [] || this.grades == null || this.grades == [] || this.assignmentGroups == null || this.assignmentGroups == []) return
 
-        console.log("converting grades")
-        
         // turn imported data into a JSON
         let exportJSON = {}
         for (let i = 0; i < this.sections.length; i++) {
@@ -1500,14 +1511,14 @@ class CourseSection extends Section {
                     }
                 }
                 else {
-                    let currentDate = new Date(Date.now())
-                    for (let k = 0; k < this.overallStudentGrades.length; k++) if (this.overallStudentGrades[k].user_id == currentStudent.id) {
+                    let currentDate = filterDate(new Date(Date.now()))
+                    for (let k = 0; k < this.overallStudentGrades.length; k++) if (this.overallStudentGrades[k].sis_user_id == currentStudent.sis_user_id) {
                         exportJSON[currentSection].push({
                             "STUDENT_PERM_ID": this.overallStudentGrades[k].sis_user_id,
                             "STUDENT_LAST_NAME": this.overallStudentGrades[k].sortable_name.slice(0, this.overallStudentGrades[k].sortable_name.indexOf(", ")),
                             "STUDENT_FIRST_NAME": this.overallStudentGrades[k].sortable_name.slice(this.overallStudentGrades[k].sortable_name.indexOf(", ") + 2),
                             "OVERALL_SCORE": this.overallStudentGrades[k].score,
-                            "ASSIGNMENT_NAME": "Canvas Grade",
+                            "ASSIGNMENT_NAME": "Canvas Overall Grade",
                             "ASSIGNMENT_DESCRIPTION": "Overall student grade from Canvas",
                             "MAX_SCORE": 100,
                             "POINTS": 100,
@@ -1574,7 +1585,7 @@ var courseSections = []
 function getCoursesAsync() {
         
         getDataAsync(["users", "self", "courses"]).then((courses) => {
-            console.log(courses)
+            console.log("courses", courses)
             var currentCourses = []
             for (let i = 0; i < courses.length; i++) {
                 if (courses[i].sis_course_id != null && courses[i].sis_course_id.indexOf(currentSchoolYear) == 0) {
