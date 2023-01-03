@@ -473,6 +473,43 @@ class Section {
 }
 
 
+function createTermSelector(parent, includeLabel) {
+
+    if (includeLabel) {
+        let termSelectorLabel = document.createElement("span")
+        termSelectorLabel.innerHTML = "<br>Select Current Grading Period: "
+        parent.appendChild(termSelectorLabel)
+    }
+
+    let termSelector = document.createElement("select")
+    termSelector.innerHTML = `
+        <option value = "Quarter 1">Quarter 1</option>
+        <option value = "Quarter 2">Quarter 2</option>
+        <option value = "Quarter 3">Quarter 3</option>
+        <option value = "Quarter 4">Quarter 4</option>`
+    chrome.storage.local.get(["currentTerm"], (result) => {
+        termSelector.value = result.currentTerm
+        selectedTerm = result.currentTerm
+    })
+    parent.appendChild(termSelector)
+
+    new Info(20, "Select the grading period for which you would like to tranfer grades", parent)
+
+    termSelector.onchange = () => {
+        selectedTerm = termSelector.value
+
+        for (let i in courseSections) courseSections[i].makeTypeMatchers()
+
+        chrome.storage.local.set({currentTerm: termSelector.value}).then(() => {
+            console.log("current term saved")
+        })
+    }
+    
+    let termSelectorLineBreak = document.createElement("br")
+    parent.appendChild(termSelectorLineBreak)
+
+}
+
 
 
 class HomeSection extends Section {
@@ -483,59 +520,52 @@ class HomeSection extends Section {
         this.sideBarLink = new SectionLink("Home", this)
 
 
-        this.termSelectorLabel = document.createElement("span")
-        this.termSelectorLabel.innerHTML = "<br>Select Current Grading Period: "
-        this.wrapper.appendChild(this.termSelectorLabel)
-
-        this.termSelector = document.createElement("select")
-        this.termSelector.innerHTML = `
-            <option value = "Quarter 1">Quarter 1</option>
-            <option value = "Quarter 2">Quarter 2</option>
-            <option value = "Quarter 3">Quarter 3</option>
-            <option value = "Quarter 4">Quarter 4</option>`
-        chrome.storage.local.get(["currentTerm"], (result) => {
-            this.termSelector.value = result.currentTerm
-            selectedTerm = result.currentTerm
-        })
-        this.wrapper.appendChild(this.termSelector)
-
-        this.termSelectorInfo = new Info(25, "Due dates will be constrained to the current grading period in export files in order to be accepted by Synergy", this.wrapper)
-
-        this.termSelector.onchange = () => {
-            selectedTerm = this.termSelector.value
-
-            chrome.storage.local.set({currentTerm: this.termSelector.value}).then(() => {
-                console.log("current term saved")
-            })
-        }
-        
-        this.termSelectorLineBreak = document.createElement("br")
-        this.wrapper.appendChild(this.termSelectorLineBreak)
+        createTermSelector(this.wrapper, true)
 
         this.coursesLoading = new Loading(35, this.wrapper)
         this.coursesLoading.startLoading()
 
 
-        this.currentCourses = []
+        this.currentCoursesWrapper = document.createElement("span")
+        this.wrapper.appendChild(this.currentCoursesWrapper)
 
-        this.addCourseLabels = []
-        this.addCourseButtons = []
+        this.showOtherCoursesButton = document.createElement("button")
+        this.showOtherCoursesButton.classList.add("c2sButton", "reloadButton")
+        this.showOtherCoursesButton.style.margin = "5px"
+        this.showOtherCoursesButton.style.display = "none"
+        this.showOtherCoursesButton.textContent = "Show Other Courses"
+        this.wrapper.appendChild(this.showOtherCoursesButton)
+
+        this.wrapper.appendChild(document.createElement("br"))
+
+        this.otherCoursesWrapper = document.createElement("span")
+        this.otherCoursesWrapper.style.display = "none"
+        this.wrapper.appendChild(this.otherCoursesWrapper)
+
+        this.showOtherCoursesButton.onclick = () => {
+            if (this.otherCoursesWrapper.style.display == "none") {
+                this.otherCoursesWrapper.style.display = ""
+                this.showOtherCoursesButton.textContent = "Hide Other Courses"
+            }
+            else {
+                this.otherCoursesWrapper.style.display = "none"
+                this.showOtherCoursesButton.textContent = "Show Other Courses"
+            }
+        }
 
     }
 
-    populateCurrentCourses(currentCourses) {
+    populateCurrentCourses(courses) {
 
-        for (let i = 0; i < this.addCourseLabels.length; i++) this.addCourseLabels[i].remove()
-        for (let i = 0; i < this.addCourseButtons.length; i++) this.addCourseButtons[i].remove()
+        this.currentCoursesWrapper.innerHTML = ""
+        this.otherCoursesWrapper.innerHTML = ""
 
         if (this.coursesLoading.image != null) this.coursesLoading.image.remove()
 
-        this.currentCourses = currentCourses
-
-        for (let i = 0; i < this.currentCourses.length; i++) {
+        let addCourseListing = (course, parent) => {
 
             let alreadyAdded = false
-            for (let j = 0; j < courseSections.length; j++) if (courseSections[j].id == this.currentCourses[i].id) alreadyAdded = true
+            for (let j = 0; j < courseSections.length; j++) if (courseSections[j].id == course.id) alreadyAdded = true
 
             let text = "+ Add"
             let elementClass = "actionButton"
@@ -546,10 +576,10 @@ class HomeSection extends Section {
             }
 
             let extraInfo = ""
-            if (currentCourses[i].workflow_state == "available") extraInfo += ` <i style = "color: green">available</i>`
-            else extraInfo += ` <i style = "color: darkgray">` + currentCourses[i].workflow_state + "</i>"
-            if (currentCourses[i].end_at != null) {
-                let endAtDate = new Date(currentCourses[i].end_at)
+            if (course.workflow_state == "available") extraInfo += ` <i style = "color: green">available</i>`
+            else extraInfo += ` <i style = "color: darkgray">` + course.workflow_state + "</i>"
+            if (course.end_at != null) {
+                let endAtDate = new Date(course.end_at)
                 if (endAtDate.getTime() <= endDates[1].getTime()) extraInfo += ` <i style = "color: gray">first semester</i>`
                 else if (endAtDate.getTime() <= endDates[3].getTime()) extraInfo += ` <i style = "color: gray">second semester</i>`
             }
@@ -559,19 +589,17 @@ class HomeSection extends Section {
             courseButton.classList.add(elementClass, "c2sButton")
             courseButton.style.margin = "5px"
             courseButton.textContent = text
-            this.wrapper.appendChild(courseButton)
-            this.addCourseButtons.push(courseButton)
+            parent.appendChild(courseButton)
 
             let courseLabel = document.createElement("span")
-            courseLabel.innerHTML = `<a href = "https://lms.pps.net/courses/` + this.currentCourses[i].id + `" target = "_blank">` + this.currentCourses[i].name + "</a> (" + this.currentCourses[i].id + ")" + extraInfo + "<br>"
-            this.wrapper.appendChild(courseLabel)
-            this.addCourseLabels.push(courseLabel)
+            courseLabel.innerHTML = `<a href = "https://lms.pps.net/courses/` + course.id + `" target = "_blank">` + course.name + "</a> (" + course.id + ")" + extraInfo + "<br>"
+            parent.appendChild(courseLabel)
 
             courseButton.onclick = () => {
                 if (courseButton.textContent == "+ Add") {
                     courseSections.push(new CourseSection({
-                        name: this.currentCourses[i].name,
-                        id: this.currentCourses[i].id
+                        name: course.name,
+                        id: course.id
                     }))
                     
                     courseButton.classList.remove("actionButton")
@@ -579,7 +607,7 @@ class HomeSection extends Section {
                     courseButton.textContent = "Remove"
                 }
                 else {
-                    for (let j in courseSections) if (courseSections[j].id == this.currentCourses[i].id) {
+                    for (let j in courseSections) if (courseSections[j].id == course.id) {
                         courseSections[j].sideBarLink.delete()
                         courseSections[j].delete()
 
@@ -594,6 +622,29 @@ class HomeSection extends Section {
                 saveCourses()
             }
         }
+
+        for (let i = 0; i < courses.length; i++) {
+
+            let parent = this.otherCoursesWrapper
+            if (courses[i].workflow_state == "available") parent = this.currentCoursesWrapper
+
+            addCourseListing(courses[i], parent)
+
+        }
+
+        for (let i = 0; i < courseSections.length; i++) {
+            let isAlreadyListed = false
+            for (let j = 0; j < courses.length; j++) if (courses[j].id == courseSections[i].id) isAlreadyListed = true
+
+            if (!isAlreadyListed) addCourseListing({
+                id: courseSections[i].id,
+                name: courseSections[i].name,
+                workflow_state: ""
+            }, this.currentCoursesWrapper)
+        }
+
+        if (this.otherCoursesWrapper.innerHTML != "") this.showOtherCoursesButton.style.display = ""
+        else this.showOtherCoursesButton.style.display = "none"
 
     }
 
@@ -661,7 +712,7 @@ class SettingsSection extends Section {
 
         let showPreviewExportsLabel = document.createElement("span")
         showPreviewExportsLabel.style.height = "20px"
-        showPreviewExportsLabel.innerHTML = "Show Preview Exports<br>"
+        showPreviewExportsLabel.innerHTML = "Show Preview Transfer Files<br>"
         this.wrapper.appendChild(showPreviewExportsLabel)
 
         showPreviewExportsToggle.onchange = () => {
@@ -834,42 +885,60 @@ class HelpSection extends Section {
 
         this.instructionsBody = document.createElement("p")
         this.instructionsBody.innerHTML = `
-        <br><i style = "color: green;"><b>First Time Setup</b></i><i style = "color: gray"> (Synergy Sample File)</i>
-        <br> - In TeacherVUE, go to the <b>Import Assignments</b> page under the <b>Grade Book</b> dropdown menu
-        <br> - Click on the <b>Download Sample File</b> button in the top right of the page
-        <br> - Upload this file to Canvas To Synergy in the <b>Settings</b> page
-        <br>
-        <br><i style = "color: green;"><b>Adding Courses</b></i>
-        <br> - In the Canvas To Synergy <b>Home</b> page, click <b>+ Add</b> next to courses that you would like to use with Canvas To Synergy
-        <br>
-        <br><i style = "color: green;"><b>Removing Courses</b></i>
-        <br> - In a Canvas To Synergy course page, click <b>Remove This Course</b>
-        <br><i style = "color: gray">&emsp; - This only affects your Canvas To Synergy preferences, Canvas To Synergy cannot delete your actual courses</i>
-        <br>
-        <br><i style = "color: green;"><b>Configuring Export Settings</b></i><i style = "color: gray"> (per course)</i>
-        <br> - Select the Synergy assignment types from the dropdowns that match the Canvas assignment groups on the left (for assignment weighting)
-        <br> - If you'd like ungraded submissions to be hidden in Synergy, check the <b>Show Only When Scored</b> checkbox
-        <br> - If you'd like to exclude any students from the grade transfer, select their names in the selection box with <b><i>Ctrl + click</i></b>
-        <br>
-        <br><i style = "color: green;"><b>Downloading Synergy Import Files</b></i><i style = "color: gray"> (per course section)</i>
-        <br> - In a Canvas To Synergy course page, click on the <b>Download</b> button corresponding with the section you would like to download grades for
-        <br>
-        <br><i style = "color: green;"><b>Importing grades to Synergy</b></i><i style = "color: gray"> (per course section)</i>
-        <br> - Go to <b>Import Assignments</b> under the <b>Grade Book</b> dropdown menu in TeacherVUE
-        <br> - Make sure you are in the desired course section
-        <br> - Turn on the first and third settings
-        <br> - Select or drag and drop the corresponding Canvas To Synergy download file into the file selector
-        <br> - If errors appear, consult the <i style = "color: darkred;">Possible Causes For Error</i> section below
-        <br> - Review the uploaded grades if you'd like to, and click <b>Import Data</b>
-        <br> - Check gradebook to make sure grades were imported correctly
-        <br>
-        <br><i style = "color: darkred;"><b>Possible Causes For Error</b></i><i style = "color: gray"> (errors are common -- no need to worry)</i>
-        <br> - Make sure you are uploading to the correct course and period number that corresponds with the Canvas To Synergy download file name
-        <br> - Make sure there are no extra students in your Canvas course section that are absent from your Synergy course
-        <br>&emsp; - If this is the case, try turning on <b>Show Only When Scored</b> in the Canvas To Synergy course page, re-download the file, and try again
-        <br> - <span style = "color: darkred;">If the solutions above don't work:</span>
-        <br>&emsp; - Turn on the fourth setting in <b>Import Assignments</b> to show detailed error messages and try to manually find the problem
-        <br>&emsp; - Email nfenger@pps.net or sunil.williams.4@gmail.com with your error message
+        <i style = "color: green;"><b>First Time Setup</b></i><i style = "color: gray"> (Synergy Sample File)</i>
+        <ul class = "instructions">
+            <li>In TeacherVUE, go to the <b>Import Assignments</b> page under the <b>Grade Book</b> dropdown menu</li>
+            <li>Click on the <b>Download Sample File</b> button in the top right of the page</li>
+            <li>Upload this file to Canvas To Synergy in the <b>Settings</b> page</li>
+        </ul>
+        <i style = "color: green;"><b>Adding Courses</b></i>
+        <ul class = "instructions">
+            <li>In the Canvas To Synergy <b>Home</b> page, click <b>+ Add</b> next to courses that you would like to use with Canvas To Synergy</li>
+        </ul>
+        <i style = "color: green;"><b>Removing Courses</b></i>
+        <ul class = "instructions">
+            <li>In a Canvas To Synergy course page, click <b>Remove This Course</b></li>
+            <ul class = "instructions">
+                <li><i style = "color: gray">This only affects your Canvas To Synergy preferences, Canvas To Synergy cannot delete your actual courses</i></li>
+            </ul>
+        </ul>
+        <i style = "color: green;"><b>Configuring Export Settings</b></i><i style = "color: gray"> (per course)</i>
+        <ul class = "instructions">
+            <li>Select the Synergy assignment types from the dropdowns that match the Canvas assignment groups on the left (for assignment weighting)</li>
+            <li>If you'd like ungraded submissions to be hidden in Synergy, check the <b>Show Only When Scored</b> checkbox</li>
+            <li>If you'd like to exclude any students from the grade transfer, select their names in the selection box with <b><i>Ctrl + click</i></b></li>
+        </ul>
+        <i style = "color: green;"><b>Downloading Synergy Import Files</b></i><i style = "color: gray"> (per course section)</i>
+        <ul class = "instructions">
+            <li>In a Canvas To Synergy course page, click on the <i class="icon-download" aria-hidden="true"></i> button corresponding with the section you would like to transfer grades for</li>
+            <ul class = "instructions">
+                <li>If your gradebook has changed while using Canvas to Synergy click <b>Refresh</b> to make sure the transfer files are up-to-date</li>
+            </ul>
+        </ul>
+        <i style = "color: green;"><b>Importing grades to Synergy</b></i><i style = "color: gray"> (per course section)</i>
+        <ul class = "instructions">
+            <li>Go to <b>Import Assignments</b> under the <b>Grade Book</b> dropdown menu in TeacherVUE</li>
+            <li>Make sure you are in the desired course section</li>
+            <li>Turn on the first and third settings</li>
+            <li>Select or drag and drop the corresponding Canvas To Synergy file into the file selector</li>
+            <li>If errors appear, consult the <i style = "color: darkred;">Possible Causes For Error</i> section below</li>
+            <li>Review the uploaded grades if you'd like, and click <b>Import Data</b></li>
+            <li>Check gradebook to make sure grades were imported correctly</li>
+            <li>Follow the image below to make sure all assignments are applied to the current grading period
+        <br><br><img src = "https://i.imgur.com/ywhifaO.png" style = "border-radius: 5px"></img></li><br>
+        </ul>
+        <i style = "color: darkred;"><b>Possible Causes For Error</b></i><i style = "color: gray"> (errors are common -- no need to worry)</i>
+        <ul class = "instructions">
+            <li>Make sure you are uploading to the correct course and period number that corresponds with the Canvas To Synergy file name</li>
+            <li>Make sure there are no extra students in your Canvas course section that are absent from your Synergy course</li>
+            <ul class = "instructions">
+                <li>If this is the case, try turning on <b>Show Only When Scored</b> in the Canvas To Synergy course page, re-download the file, and try again</li>
+            </ul>
+            <li><span style = "color: darkred;">If the solutions above don't work:</span></li>
+            <ul class = "instructions">
+                <li>Turn on the fourth setting in <b>Import Assignments</b> to show detailed error messages and re-upload the file</li>
+                <li>Email nfenger@pps.net or sunil.williams.4@gmail.com with your error message</li>
+        </ul>
         <br>
         <br>
         <br>
@@ -919,6 +988,9 @@ class CourseSection extends Section {
         this.loadingBar = new LoadingBar(this.wrapper)
         this.loadingBar.wrapper.style.display = "none"
 
+        this.termSelectorWrapper = document.createElement("div")
+        createTermSelector(this.termSelectorWrapper, false)
+
 
 
         this.courseElements = []
@@ -936,6 +1008,9 @@ class CourseSection extends Section {
         for (let i in this.courseElements) this.courseElements[i].remove()
         for (let i in this.infos) this.infos[i].wrapper.remove()
 
+        this.courseElements = []
+        this.infos = []
+
         if (!settingsSection.preferences.transferOverallGrades && (this.assignmentGroups.length == 0 || this.assignments.length == 0 || this.sections.length == 0 || this.grades.length == 0)) {
             return
         }
@@ -952,9 +1027,12 @@ class CourseSection extends Section {
         downloadTitle.style.paddingBottom = "10px"
         downloadTitle.style.borderBottomStyle = "dashed"
         downloadTitle.style.borderColor = "gray"
-        downloadTitle.textContent = "Download Exports"
+        downloadTitle.textContent = "Download Transfer Files"
         this.wrapper.appendChild(downloadTitle)
         this.courseElements.push(downloadTitle)
+
+        this.wrapper.appendChild(this.termSelectorWrapper)
+        this.courseElements.push(this.termSelectorWrapper)
 
         if (this.sections.length > 0) this.infos.push(new Info(20, "Click buttons below to download grade transfer files for each course section", downloadTitle))
 
@@ -963,7 +1041,7 @@ class CourseSection extends Section {
             let downloadFileButton = document.createElement("button")
             downloadFileButton.classList.add("actionButton", "c2sButton")
             downloadFileButton.style.marginTop = "10px"
-            downloadFileButton.innerHTML = `<i class="icon-download" aria-hidden="true"></i>` + " " + this.sections[i].name
+            downloadFileButton.innerHTML = `<i class="icon-download" aria-hidden="true"></i>` + " " + this.sections[i].name + " - " + selectedTerm
             downloadFileButton.title = "Download Synergy import file"
             this.wrapper.appendChild(downloadFileButton)
             this.courseElements.push(downloadFileButton)
@@ -972,42 +1050,46 @@ class CourseSection extends Section {
             this.wrapper.appendChild(lineBreak)
             this.courseElements.push(lineBreak)
 
-            downloadFileButton.onclick = () => { // download synergy import file (a .xls file with grades for this section)
-                this.convertGrades()
-                saveCourses()
-                console.log(this.sections[i].name, this.convertedGrades[this.sections[i].name])
+            downloadFileButton.onclick = () => { 
+                if (types.length != 0 || settingsSection.preferences.transferOverallGrades) { // download synergy import file (a .xls file with grades for this section)
+                    this.convertGrades()
+                    saveCourses()
+                    console.log(this.sections[i].name, this.convertedGrades[this.sections[i].name])
 
-                // make .xls file from grades of this section
+                    // make .xls file from grades of this section
 
-                let currentGradesJSON = this.convertedGrades[this.sections[i].name]
+                    let currentGradesJSON = this.convertedGrades[this.sections[i].name]
 
-                let tableXML = `<thead valign = "top">`
-                tableXML += "<tr>"
-                for (let columnName in currentGradesJSON[0]) tableXML += "<th>" + columnName + "</th>"
-                tableXML += "</tr></thead><tbody>"
-
-                for (let i = 0; i < currentGradesJSON.length; i++) {
+                    let tableXML = `<thead valign = "top">`
                     tableXML += "<tr>"
-                    for (let columnName in currentGradesJSON[i]) {
-                        tableXML += "<td>" + currentGradesJSON[i][columnName] + "</td>"
+                    for (let columnName in currentGradesJSON[0]) tableXML += "<th>" + columnName + "</th>"
+                    tableXML += "</tr></thead><tbody>"
+
+                    for (let i = 0; i < currentGradesJSON.length; i++) {
+                        tableXML += "<tr>"
+                        for (let columnName in currentGradesJSON[i]) {
+                            tableXML += "<td>" + currentGradesJSON[i][columnName] + "</td>"
+                        }
+                        tableXML += "</tr>"
                     }
-                    tableXML += "</tr>"
+
+                    tableXML += "</tbody>"
+
+                    tableXML = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40"><head><!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet><x:Name>{worksheet}</x:Name><x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions></x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]--><meta http-equiv="content-type" content="text/plain; charset=UTF-8"/></head><body><table>${tableXML}</table></body></html>`
+
+                    let gradesBlob = new Blob([tableXML], {type: "application/vnd.ms-excel"}) // create blob out of tableXML
+                    // download the file as "canvas section name.xls"
+                    let url = URL.createObjectURL(gradesBlob)
+                    let a = document.createElement("a")
+                    document.body.appendChild(a)
+                    a.href = url
+                    a.download = this.sections[i].name + " - " + selectedTerm + ".xls"
+                    a.click()
+                    window.setTimeout(() => {URL.revokeObjectURL(url)}, 0)
                 }
-
-                tableXML += "</tbody>"
-
-                tableXML = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40"><head><!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet><x:Name>{worksheet}</x:Name><x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions></x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]--><meta http-equiv="content-type" content="text/plain; charset=UTF-8"/></head><body><table>${tableXML}</table></body></html>`
-
-                let gradesBlob = new Blob([tableXML], {type: "application/vnd.ms-excel"}) // create blob out of tableXML
-                // download the file as "canvas section name.xls"
-                let url = URL.createObjectURL(gradesBlob)
-                let a = document.createElement("a")
-                document.body.appendChild(a)
-                a.href = url
-                a.download = this.sections[i].name + ".xls"
-                a.click()
-                window.setTimeout(() => {URL.revokeObjectURL(url)}, 0)
-                
+                else {
+                    alert("You must upload a Synergy Sample File before downloading (see help page on the left)")
+                }
             }
         }
 
@@ -1017,14 +1099,16 @@ class CourseSection extends Section {
         exportSettingsTitle.style.paddingBottom = "10px"
         exportSettingsTitle.style.borderBottomStyle = "dashed"
         exportSettingsTitle.style.borderColor = "gray"
-        exportSettingsTitle.textContent = "Export Settings"
+        exportSettingsTitle.textContent = "Transfer Settings"
         this.wrapper.appendChild(exportSettingsTitle)
         this.courseElements.push(exportSettingsTitle)
 
-        this.infos.push(new Info(20, `
+        let infoText = `
         Match your Canvas weighting categories to your Synergy weighting categories<br><br>
         Select whether or not you would like unscored assignments to show up in your students' gradebooks<br><br>
-        Select students to exclude from the transfer`, exportSettingsTitle))
+        Select students to exclude from the transfer`
+        if (settingsSection.preferences.transferOverallGrades) infoText = "Select students to exclude from the transfer"
+        this.infos.push(new Info(20, infoText, exportSettingsTitle))
 
         if (!settingsSection.preferences.transferOverallGrades) {
 
@@ -1146,7 +1230,7 @@ class CourseSection extends Section {
             }
 
             let preferencesWrapper = document.createElement("div")
-            preferencesWrapper.style.width = "475px"
+            preferencesWrapper.style.width = "520px"
             preferencesWrapper.style.marginTop = "10px"
             preferencesWrapper.style.borderTopStyle = "dotted"
             preferencesWrapper.style.borderTopColor = "darkgray"
@@ -1246,7 +1330,7 @@ class CourseSection extends Section {
             gradesPreviewTitle.style.paddingBottom = "10px"
             gradesPreviewTitle.style.borderBottomStyle = "dashed"
             gradesPreviewTitle.style.borderColor = "gray"
-            gradesPreviewTitle.textContent = "Preview Exports"
+            gradesPreviewTitle.textContent = "Preview Transfer Files"
             this.wrapper.appendChild(gradesPreviewTitle)
             this.courseElements.push(gradesPreviewTitle)
 
@@ -1662,14 +1746,14 @@ function getCoursesAsync() {
         
         getDataAsync(["users", "self", "courses"], accessToken).then((courses) => {
             console.log("courses", courses)
-            var currentCourses = []
+            var currentYearCourses = []
             for (let i = 0; i < courses.length; i++) {
                 if (courses[i].sis_course_id != null && courses[i].sis_course_id.indexOf(currentSchoolYear) == 0) {
-                    currentCourses.push(courses[i])
+                    currentYearCourses.push(courses[i])
                 }
             }
 
-            homeSection.populateCurrentCourses(currentCourses)
+            homeSection.populateCurrentCourses(currentYearCourses)
 
         })
 
