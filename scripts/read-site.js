@@ -485,8 +485,10 @@ function createTermSelector(parent, includeLabel) {
         <option value = "Quarter 3">Quarter 3</option>
         <option value = "Quarter 4">Quarter 4</option>`
     chrome.storage.local.get(["currentTerm"], (result) => {
-        termSelector.value = result.currentTerm
-        selectedTerm = result.currentTerm
+        if (result.currentTerm != null) {
+            termSelector.value = result.currentTerm
+            selectedTerm = result.currentTerm
+        }
     })
     parent.appendChild(termSelector)
 
@@ -953,11 +955,7 @@ class CourseSection extends Section {
             return
         }
 
-        for (let i in this.termSelector.children) {
-            if (this.termSelector.children[i].value == selectedTerm) {
-                this.termSelector.children[i].selected = true
-            }
-        }
+        this.termSelector.value = selectedTerm
 
         this.loadingBar.wrapper.style.display = "none"
         this.loadingBar.updateStatus(0)
