@@ -505,6 +505,8 @@ function createTermSelector(parent, includeLabel) {
     let termSelectorLineBreak = document.createElement("br")
     parent.appendChild(termSelectorLineBreak)
 
+    return termSelector
+
 }
 
 
@@ -922,7 +924,7 @@ class CourseSection extends Section {
         this.loadingBar.wrapper.style.display = "none"
 
         this.termSelectorWrapper = document.createElement("div")
-        createTermSelector(this.termSelectorWrapper, false)
+        this.termSelector = createTermSelector(this.termSelectorWrapper, false)
 
 
 
@@ -949,6 +951,12 @@ class CourseSection extends Section {
         }
         if (settingsSection.preferences.transferOverallGrades && (this.sections.length == 0 || this.overallStudentGrades.length == 0)) {
             return
+        }
+
+        for (let i in this.termSelector.children) {
+            if (this.termSelector.children[i].value == selectedTerm) {
+                this.termSelector.children[i].selected = true
+            }
         }
 
         this.loadingBar.wrapper.style.display = "none"
