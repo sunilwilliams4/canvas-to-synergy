@@ -601,7 +601,7 @@ class HomeSection extends Section {
                         foundCourse = true
                     }
                 }
-                if (!foundCourse) alert(`Click "+Add" before opening that course page`)
+                if (!foundCourse) alert(`Click "+Add" before opening ${course.name}`)
             }
             parent.appendChild(courseLabel)
 
