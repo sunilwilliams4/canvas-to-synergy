@@ -599,7 +599,17 @@ class HomeSection extends Section {
             parent.appendChild(courseButton)
 
             let courseLabel = document.createElement("span")
-            courseLabel.innerHTML = `<a href = "https://lms.pps.net/courses/` + course.id + `" target = "_blank">` + course.name + "</a> (" + course.id + ")" + extraInfo + "<br>"
+            courseLabel.innerHTML = `<a style = "cursor: pointer;">` + course.name + "</a> (" + course.id + ")" + extraInfo + "<br>"
+            courseLabel.onclick = () => {
+                let foundCourse = false
+                for (let i in courseSections) {
+                    if (courseSections[i].id == course.id) {
+                        courseSections[i].sideBarLink.wrapper.click()
+                        foundCourse = true
+                    }
+                }
+                if (!foundCourse) alert(`Click "+Add" before opening ${course.name}`)
+            }
             parent.appendChild(courseLabel)
 
             courseButton.onclick = () => {
