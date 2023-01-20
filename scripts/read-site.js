@@ -707,6 +707,8 @@ class SettingsSection extends Section {
             }
         }
 
+        let massImportInfo = new Info(20, "Upload the Synergy sample file (see first time setup in help page for instructions)", this.wrapper)
+
         
         let preferencesTitle = document.createElement("h3")
         preferencesTitle.style.marginTop = "20px"
@@ -1225,7 +1227,7 @@ class CourseSection extends Section {
                 this.wrapper.appendChild(massImportInput)
                 this.courseElements.push(massImportInput)
 
-                this.infos.push(new Info(20, "In order to match assignment weighting groups, you must first upload a Synergy sample file (see help page for instructions)", this.wrapper))
+                this.infos.push(new Info(20, "In order to match assignment weighting groups, you must first upload the Synergy sample file (see first time setup in help page for instructions)", this.wrapper))
 
                 let lineBreak = document.createElement("br")
                 this.wrapper.appendChild(lineBreak)
