@@ -16,7 +16,7 @@ var endDates = [
 
 var currentSchoolYear = endDates[3].getFullYear() // year that appears in sis_course_id for each course
 
-var selectedTerm = "Quarter 1" // this is set by the term selector
+var selectedTerm // this is set by the term selector
 
 function filterDate(date) {
     let filteredDate = date

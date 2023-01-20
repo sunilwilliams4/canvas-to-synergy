@@ -142,6 +142,7 @@ var canvasMenu = document.getElementById("menu")
 if (canvasMenu != null) {
 
 var types = []
+var overallGradeAssignmentType
 
 var canvasWrapper = document.getElementById("wrapper")
 
@@ -485,10 +486,8 @@ function createTermSelector(parent, includeLabel) {
         <option value = "Quarter 3">Quarter 3</option>
         <option value = "Quarter 4">Quarter 4</option>`
     chrome.storage.local.get(["currentTerm"], (result) => {
-        if (result.currentTerm != null) {
-            termSelector.value = result.currentTerm
-            selectedTerm = result.currentTerm
-        }
+        termSelector.value = result.currentTerm || "Quarter 1"
+        selectedTerm = result.currentTerm || "Quarter 1"
     })
     parent.appendChild(termSelector)
 
@@ -497,7 +496,11 @@ function createTermSelector(parent, includeLabel) {
     termSelector.onchange = () => {
         selectedTerm = termSelector.value
 
-        for (let i in courseSections) courseSections[i].makeTypeMatchers()
+        homeSection.termSelector.value = selectedTerm
+        for (let i in courseSections) {
+            courseSections[i].termSelector.value = selectedTerm
+            courseSections[i].makeTypeMatchers()
+        }
 
         chrome.storage.local.set({currentTerm: termSelector.value}).then(() => {
             console.log("current term saved")
@@ -521,7 +524,7 @@ class HomeSection extends Section {
         this.sideBarLink = new SectionLink("Home", this)
 
 
-        createTermSelector(this.wrapper, true)
+        this.termSelector = createTermSelector(this.wrapper, true)
 
         this.coursesLoading = new Loading(35, this.wrapper)
         this.coursesLoading.startLoading()
@@ -604,7 +607,7 @@ class HomeSection extends Section {
                         foundCourse = true
                     }
                 }
-                if (!foundCourse) alert(`Click "+Add" before opening that course page`)
+                if (!foundCourse) alert(`Click "+Add" before opening ${course.name}`)
             }
             parent.appendChild(courseLabel)
 
@@ -695,12 +698,15 @@ class SettingsSection extends Section {
                 console.log("uploaded types", types)
 
                 for (let i = 0; i < courseSections.length; i++) courseSections[i].makeTypeMatchers()
+                this.makeOverallGradeTypeOptions()
         
                 chrome.storage.local.set({types: JSON.stringify(types)}, () => {
                     console.log("types saved")
                 })
             }
         }
+
+        let massImportInfo = new Info(20, "Upload the Synergy sample file (see first time setup in help page for instructions)", this.wrapper)
 
         
         let preferencesTitle = document.createElement("h3")
@@ -748,25 +754,20 @@ class SettingsSection extends Section {
         let transferOverallGradesBlurb = document.createElement("i")
         transferOverallGradesBlurb.style.color = "gray"
         transferOverallGradesBlurb.style.display = "none"
-        transferOverallGradesBlurb.textContent = `You must create a new assignment type in Synergy called "Canvas" with 100% weighting before transfering grades with this feature`
+        transferOverallGradesBlurb.textContent = `Select an assignment type for the overall grade assignment`
         this.wrapper.appendChild(transferOverallGradesBlurb)
 
-        let copyAssignmentTypeButton = document.createElement("button")
-        copyAssignmentTypeButton.classList.add("c2sButton", "actionButton")
-        copyAssignmentTypeButton.style.padding = "5px 8px 5px 8px"
-        copyAssignmentTypeButton.style.display = "none"
-        copyAssignmentTypeButton.textContent = "Copy Assignment Type Name"
-        this.wrapper.appendChild(copyAssignmentTypeButton)
-        copyAssignmentTypeButton.onclick = () => {
-            navigator.clipboard.writeText("Canvas")
-            copyAssignmentTypeButton.textContent = "Copied"
-            copyAssignmentTypeButton.style.backgroundColor = "green"
-            copyAssignmentTypeButton.style.borderColor = "green"
-            window.setTimeout(() => {
-                copyAssignmentTypeButton.textContent = "Copy Assignment Type Name"
-                copyAssignmentTypeButton.style.backgroundColor = ""
-                copyAssignmentTypeButton.style.borderColor = ""
-            }, 2000)
+        this.overallTypeDropdown = document.createElement("select")
+        this.overallTypeDropdown.style.display = "none"
+        this.overallTypeDropdown.title = "Select the appropriate Synergy assignment type for the assignment group to the left"
+        this.wrapper.appendChild(this.overallTypeDropdown)
+
+        this.overallTypeDropdown.onchange = () => {
+            overallGradeAssignmentType = this.overallTypeDropdown.value
+            for (let i in courseSections) courseSections[i].makeTypeMatchers()
+            chrome.storage.local.set({overallGradeAssignmentType: overallGradeAssignmentType}, () => {
+                console.log("overall grade assignment type saved")
+            })
         }
 
 
@@ -775,11 +776,11 @@ class SettingsSection extends Section {
             this.savePreferences()
             if (this.preferences.transferOverallGrades) {
                 transferOverallGradesBlurb.style.display = "block"
-                copyAssignmentTypeButton.style.display = "block"
+                this.overallTypeDropdown.style.display = "block"
             }
             else {
                 transferOverallGradesBlurb.style.display = "none"
-                copyAssignmentTypeButton.style.display = "none"
+                this.overallTypeDropdown.style.display = "none"
             }
             for (let i in courseSections) {
                 courseSections[i].fetched = false
@@ -796,9 +797,10 @@ class SettingsSection extends Section {
             transferOverallGradesToggle.checked = this.preferences.transferOverallGrades
             if (this.preferences.transferOverallGrades) {
                 transferOverallGradesBlurb.style.display = "block"
-                copyAssignmentTypeButton.style.display = "block"
+                this.overallTypeDropdown.style.display = "block"
             }
         })
+
 
     }
 
@@ -807,6 +809,16 @@ class SettingsSection extends Section {
         chrome.storage.local.set({preferences: JSON.stringify(this.preferences)}, () => {
             console.log("preferences saved")
         })
+    }
+
+    makeOverallGradeTypeOptions() {
+        this.overallTypeDropdown.innerHTML = ""
+        for (let j = 0; j < types.length; j++) {
+            let typeDropdownOption = document.createElement("option")
+            typeDropdownOption.value = types[j]
+            typeDropdownOption.textContent = types[j]
+            this.overallTypeDropdown.appendChild(typeDropdownOption)
+        }
     }
 
     
@@ -955,8 +967,6 @@ class CourseSection extends Section {
             return
         }
 
-        this.termSelector.value = selectedTerm
-
         this.loadingBar.wrapper.style.display = "none"
         this.loadingBar.updateStatus(0)
 
@@ -990,7 +1000,7 @@ class CourseSection extends Section {
             this.courseElements.push(lineBreak)
 
             downloadFileButton.onclick = () => { 
-                if (types.length != 0 || settingsSection.preferences.transferOverallGrades) { // download synergy import file (a .xls file with grades for this section)
+                if (types.length != 0) { // download synergy import file (a .xls file with grades for this section)
                     this.convertGrades()
                     saveCourses()
                     console.log(this.sections[i].name, this.convertedGrades[this.sections[i].name])
@@ -1141,7 +1151,7 @@ class CourseSection extends Section {
                 this.wrapper.appendChild(massImportInput)
                 this.courseElements.push(massImportInput)
 
-                this.infos.push(new Info(20, "In order to match assignment weighting groups, you must first upload a Synergy sample file (see help page for instructions)", this.wrapper))
+                this.infos.push(new Info(20, "In order to match assignment weighting groups, you must first upload the Synergy sample file (see first time setup in help page for instructions)", this.wrapper))
 
                 let lineBreak = document.createElement("br")
                 this.wrapper.appendChild(lineBreak)
@@ -1160,6 +1170,7 @@ class CourseSection extends Section {
                         console.log("uploaded types", types)
 
                         for (let i = 0; i < courseSections.length; i++) courseSections[i].makeTypeMatchers()
+                        settingsSection.makeOverallGradeTypeOptions()
                 
                         chrome.storage.local.set({types: JSON.stringify(types)}, () => {
                             console.log("types saved")
@@ -1624,7 +1635,7 @@ class CourseSection extends Section {
                             "ASSIGNMENT_DATE": currentDate.toLocaleDateString(),
                             "DUE_DATE": currentDate.toLocaleDateString(),
                             "SCORE_TYPE": "Raw Score",
-                            "ASSIGNMENT_TYPE": "Canvas",
+                            "ASSIGNMENT_TYPE": overallGradeAssignmentType ? overallGradeAssignmentType : types[0],
                             "EXCUSED": false,
                             "SHOW_ONLY_WHEN_SCORED": false
                         })
@@ -1701,9 +1712,13 @@ function getCoursesAsync() {
 
 
 
-chrome.storage.local.get(["types", "courseInfos"], (result) => {
+chrome.storage.local.get(["types", "overallGradeAssignmentType", "courseInfos"], (result) => {
 
-    types = (result.types != null) ? JSON.parse(result.types) : []
+    if (result.types != null) {
+        types = JSON.parse(result.types)
+        settingsSection.makeOverallGradeTypeOptions()
+    }
+    if (result.overallGradeAssignmentType != null) overallGradeAssignmentType = result.overallGradeAssignmentType
 
     if (result.courseInfos != null) {
         let courseInfos = JSON.parse(result.courseInfos)

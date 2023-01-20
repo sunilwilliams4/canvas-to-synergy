@@ -98,3 +98,14 @@
 
     transition: opacity .1s;
 }
+
+ul.instructions {
+    list-style-type: none;
+    margin-bottom: 15px;
+}
+
+ul.instructions li:before {
+    content: "-";
+    position: absolute;
+    margin-left: -17.5px;
+}
