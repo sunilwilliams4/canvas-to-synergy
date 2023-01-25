@@ -24,7 +24,8 @@
         "scripts/read-site.js"
       ],
       "matches": [
-        "https://lms.pps.net/*"
+        "https://lms.pps.net/*",
+        "https://portlandpublic.instructure.com/*"
       ]
     }
   ]
