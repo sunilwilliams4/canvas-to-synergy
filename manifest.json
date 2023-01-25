@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Canvas To Synergy",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "Download and convert your Canvas grades into Synergy import files.",
 
   "permissions": [
@@ -14,6 +14,22 @@
     "128": "images/logo48.png"
   },
   "content_scripts": [
+    {
+      "js": [
+        "scripts/lmspps.js"
+      ],
+      "matches": [
+        "https://lms.pps.net/*"
+      ]
+    },
+    {
+      "js": [
+        "scripts/portlandpublic.js"
+      ],
+      "matches": [
+        "https://portlandpublic.instructure.com/*"
+      ]
+    },
     {
       "css": [
         "styles/style.css"

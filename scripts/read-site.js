@@ -47,7 +47,7 @@ function getData(specifications) {
 
     let returnJSON = []
 
-    let url = "https://lms.pps.net/api/v1"
+    let url = tabUrl
     for (let i = 0; i < specifications.length; i++) url += "/" + specifications[i]
 
 
@@ -105,7 +105,7 @@ async function getDataAsync(specifications) {
 
     let returnJSON = []
 
-    let url = "https://lms.pps.net/api/v1"
+    let url = tabUrl
     for (let i = 0; i < specifications.length; i++) url += "/" + specifications[i]
 
 
