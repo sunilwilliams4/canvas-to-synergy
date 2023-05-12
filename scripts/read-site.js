@@ -47,7 +47,9 @@ function getData(specifications, accessToken) {
 
     let returnJSON = []
 
-    let url = window.location.href + "api/v1"
+    let url = window.location.origin
+    if (url.slice(-1) != "/") url += "/"
+    url += "api/v1"
     for (let i = 0; i < specifications.length; i++) url += "/" + specifications[i]
 
 
@@ -107,7 +109,9 @@ async function getDataAsync(specifications, accessToken) {
 
     let returnJSON = []
 
-    let url = window.location.href + "api/v1"
+    let url = window.location.origin
+    if (url.slice(-1) != "/") url += "/"
+    url += "api/v1"
     for (let i = 0; i < specifications.length; i++) url += "/" + specifications[i]
 
 
@@ -430,6 +434,7 @@ class LoadingBar {
 
 class Section {
     static allSections = []
+    static currentSection
     constructor(title) {
         Section.allSections.push(this)
 
@@ -456,6 +461,7 @@ class Section {
     }
 
     open() {
+        Section.currentSection = this
         for (let i = 0; i < Section.allSections.length; i++) {
             if (Section.allSections[i] == this) {
                 Section.allSections[i].wrapper.style.display = ""
@@ -980,6 +986,7 @@ class HelpSection extends Section {
 
 
 class CourseSection extends Section {
+    static lastRefreshedTime
     constructor(courseInfo) {
         super(courseInfo.name)
 
@@ -1458,6 +1465,7 @@ class CourseSection extends Section {
     fetchGrades() {
     
         this.fetched = true
+        CourseSection.lastRefreshedTime = Date.now()
         this.refreshGradesButton.style.display = "none"
 
         this.loadingBar.wrapper.style.display = "block"
@@ -1752,6 +1760,16 @@ class CourseSection extends Section {
     }
 
 
+}
+
+
+
+window.onfocus = () => {
+    let timeSinceLastRefreshed = Date.now() - CourseSection.lastRefreshedTime
+    if (timeSinceLastRefreshed > (5 * 1000) && Section.currentSection instanceof CourseSection) {
+        for (let courseSection of courseSections) courseSection.fetched = false
+        Section.currentSection.fetchGrades()
+    }
 }
 
 
