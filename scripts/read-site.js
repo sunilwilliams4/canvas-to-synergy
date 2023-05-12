@@ -47,7 +47,7 @@ function getData(specifications, accessToken) {
 
     let returnJSON = []
 
-    let url = "https://lms.pps.net/api/v1"
+    let url = window.location.href + "api/v1"
     for (let i = 0; i < specifications.length; i++) url += "/" + specifications[i]
 
 
@@ -107,7 +107,7 @@ async function getDataAsync(specifications, accessToken) {
 
     let returnJSON = []
 
-    let url = "https://lms.pps.net/api/v1"
+    let url = window.location.href + "api/v1"
     for (let i = 0; i < specifications.length; i++) url += "/" + specifications[i]
 
 
@@ -1077,7 +1077,7 @@ class CourseSection extends Section {
 
             downloadFileButton.onclick = () => { 
                 if (types.length != 0) { // download synergy import file (a .xls file with grades for this section)
-                    this.convertGrades()
+                    this.convertGrades(true)
                     saveCourses()
                     console.log(this.sections[i].name, this.convertedGrades[this.sections[i].name])
 
@@ -1186,6 +1186,11 @@ class CourseSection extends Section {
                         typeDropdownOption.textContent = types[j]
                         typeDropdown.appendChild(typeDropdownOption)
                     }
+                    let omitTypeDropdownOption = document.createElement("option")
+                    omitTypeDropdownOption.value = Number.MAX_VALUE // set this because I hope it will never match an assignment type name
+                    omitTypeDropdownOption.textContent = "OMIT FROM TRANSFER"
+                    omitTypeDropdownOption.style.color = "darkred"
+                    typeDropdown.appendChild(omitTypeDropdownOption)
 
                     if (Object.keys(this.typeSelections).length > 0) typeDropdown.value = this.typeSelections[this.assignmentGroups[i].name]
                     this.typeSelections[this.assignmentGroups[i].name] = typeDropdown.value
@@ -1632,12 +1637,13 @@ class CourseSection extends Section {
 
 
 
-    convertGrades() {
+    convertGrades(includeAlerts) {
         // if any data is missing, return
         if (this.sections == null || this.sections == [] || this.assignments == null || this.assignments == [] || this.grades == null || this.grades == [] || this.assignmentGroups == null || this.assignmentGroups == []) return
 
         // turn imported data into a JSON
         let exportJSON = {}
+        let zeroPointAssignments = [] // these will show up in an alert after processed
         for (let i = 0; i < this.sections.length; i++) {
             let currentSection = this.sections[i].name
             exportJSON[currentSection] = []
@@ -1652,8 +1658,13 @@ class CourseSection extends Section {
                 if (!settingsSection.preferences.transferOverallGrades) {
                         
                     for (let k = 0; k < this.grades.length; k++) if (this.assignments[k] != null) {
+                        if (this.assignments[k].points_possible == 0) {
+                            zeroPointAssignments.push(this.assignments[k])
+                            continue
+                        }
                         let currentAssignmentType
                         for (let l = 0; l < this.assignmentGroups.length; l++) if (this.assignments[k].assignment_group_id == this.assignmentGroups[l].id) currentAssignmentType = this.typeSelections[this.assignmentGroups[l].name]
+                        if (currentAssignmentType == Number.MAX_VALUE) continue // don't include if assignment is of the omit type
                         let submissionFound = false
                         let currentScore = null
                         let currentExcused = false
@@ -1719,6 +1730,14 @@ class CourseSection extends Section {
                 }
 
             }
+        }
+        // warn the user if zero point assignments are being omitted
+        if (includeAlerts && zeroPointAssignments.length > 0) {
+            let alertString = "These assignments that are worth zero points will be omitted from transfer files: "
+            for (let assignment of zeroPointAssignments) {
+                alertString += "\n- " + assignment.name
+            }
+            alert(alertString)
         }
 
         this.convertedGrades = exportJSON
