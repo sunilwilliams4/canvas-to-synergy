@@ -1187,17 +1187,17 @@ class CourseSection extends Section {
                     typeDropdown.title = "Select the appropriate Synergy assignment type for the assignment group to the left"
                     typeDropdownWrapper.appendChild(typeDropdown)
 
+                    let omitTypeDropdownOption = document.createElement("option")
+                    omitTypeDropdownOption.value = Number.MAX_VALUE // set this because I hope it will never match an assignment type name
+                    omitTypeDropdownOption.textContent = "OMIT FROM TRANSFER"
+                    omitTypeDropdownOption.style.color = "darkred"
+                    typeDropdown.appendChild(omitTypeDropdownOption)
                     for (let j = 0; j < types.length; j++) {
                         let typeDropdownOption = document.createElement("option")
                         typeDropdownOption.value = types[j]
                         typeDropdownOption.textContent = types[j]
                         typeDropdown.appendChild(typeDropdownOption)
                     }
-                    let omitTypeDropdownOption = document.createElement("option")
-                    omitTypeDropdownOption.value = Number.MAX_VALUE // set this because I hope it will never match an assignment type name
-                    omitTypeDropdownOption.textContent = "OMIT FROM TRANSFER"
-                    omitTypeDropdownOption.style.color = "darkred"
-                    typeDropdown.appendChild(omitTypeDropdownOption)
 
                     if (Object.keys(this.typeSelections).length > 0) typeDropdown.value = this.typeSelections[this.assignmentGroups[i].name]
                     this.typeSelections[this.assignmentGroups[i].name] = typeDropdown.value
@@ -1493,7 +1493,10 @@ class CourseSection extends Section {
 
             getDataAsync(["courses", this.id, "assignments", "?include[]=all_dates"], accessToken).then((assignments) => {
                 console.log("assignments", assignments)
-                for (let i = assignments.length - 1; i >= 0; i--) if (!assignments[i].graded_submissions_exist) assignments.splice(i, 1)
+                for (let i = assignments.length - 1; i >= 0; i--) if (
+                    !assignments[i].graded_submissions_exist || 
+                    assignments[i].omit_from_final_grade
+                    ) assignments.splice(i, 1)
                 let optimizedAssignments = []
                 for (let i = 0; i < assignments.length; i++) {
                     optimizedAssignments.push({
@@ -1667,7 +1670,7 @@ class CourseSection extends Section {
                         
                     for (let k = 0; k < this.grades.length; k++) if (this.assignments[k] != null) {
                         if (this.assignments[k].points_possible == 0) {
-                            zeroPointAssignments.push(this.assignments[k])
+                            if (!zeroPointAssignments.includes(this.assignments[k])) zeroPointAssignments.push(this.assignments[k])
                             continue
                         }
                         let currentAssignmentType
