@@ -1655,6 +1655,7 @@ class CourseSection extends Section {
         // turn imported data into a JSON
         let exportJSON = {}
         let zeroPointAssignments = [] // these will show up in an alert after processed
+        let changedGrades = [] // these will also show up
         for (let i = 0; i < this.sections.length; i++) {
             let currentSection = this.sections[i].name
             exportJSON[currentSection] = []
@@ -1680,6 +1681,15 @@ class CourseSection extends Section {
                         let currentScore = null
                         let currentExcused = false
                         for (let l = 0; l < this.grades[k].length; l++) {
+                            if (this.grades[k][l].score > this.assignments[k].points_possible) {
+                                changedGrades.push({
+                                    student: currentStudent,
+                                    assignment: this.assignments[k],
+                                    oldScore: this.grades[k][l].score,
+                                    newScore: this.assignments[k].points_possible
+                                })
+                                this.grades[k][l].score = this.assignments[k].points_possible
+                            }
                             if (this.grades[k][l].user_id == currentStudent.id) {
                                 submissionFound = true
                                 currentScore = this.grades[k][l].score
@@ -1719,6 +1729,15 @@ class CourseSection extends Section {
                     }
                 }
                 else {
+                    if (this.overallStudentGrades[k].score > 100) {
+                        this.overallStudentGrades[k].score = 100
+                        changedGrades.push({
+                            student: currentStudent,
+                            assignment: this.assignments[k],
+                            oldScore: this.overallStudentGrades[k].score,
+                            newScore: 100
+                        })
+                    }
                     let currentDate = filterDate(new Date(Date.now()))
                     for (let k = 0; k < this.overallStudentGrades.length; k++) if (this.overallStudentGrades[k].sis_user_id == currentStudent.sis_user_id) {
                         exportJSON[currentSection].push({
@@ -1743,10 +1762,20 @@ class CourseSection extends Section {
             }
         }
         // warn the user if zero point assignments are being omitted
-        if (includeAlerts && zeroPointAssignments.length > 0) {
-            let alertString = "These assignments that are worth zero points will be omitted from transfer files: "
-            for (let assignment of zeroPointAssignments) {
-                alertString += "\n- " + assignment.name
+        if (includeAlerts && (zeroPointAssignments.length > 0 || changedGrades.length > 0)) {
+            let alertString = ""
+            if (zeroPointAssignments.length > 0) {
+                alertString += "These assignments that are worth zero points will be omitted from transfer files: "
+                for (let assignment of zeroPointAssignments) {
+                    alertString += "\n- " + assignment.name
+                }
+                alertString += "\n"
+            }
+            if (changedGrades.length > 0) {
+                alertString += "These assignment scores were changed due to being too above the max score: "
+                for (let grade of changedGrades) {
+                    alertString += "\n" + grade.assignment.name + ", " + grade.student.name + ": " + grade.oldGrade + " -> " + grade.newGrade
+                }
             }
             alert(alertString)
         }
