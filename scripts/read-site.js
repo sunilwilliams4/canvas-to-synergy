@@ -926,13 +926,6 @@ class HelpSection extends Section {
         <ul class = "instructions">
             <li>In the Canvas To Synergy <b>Home</b> page, click <b>+ Add</b> next to courses that you would like to use with Canvas To Synergy</li>
         </ul>
-        <i style = "color: green;"><b>Removing Courses</b></i>
-        <ul class = "instructions">
-            <li>In a Canvas To Synergy course page, click <b>Remove This Course</b></li>
-            <ul class = "instructions">
-                <li><i style = "color: gray">This only affects your Canvas To Synergy preferences, Canvas To Synergy cannot delete your actual courses</i></li>
-            </ul>
-        </ul>
         <i style = "color: green;"><b>Configuring Export Settings</b></i><i style = "color: gray"> (per course)</i>
         <ul class = "instructions">
             <li>Select the Synergy assignment types from the dropdowns that match the Canvas assignment groups on the left (for assignment weighting)</li>
@@ -968,7 +961,7 @@ class HelpSection extends Section {
             <li><span style = "color: darkred;">If the solutions above don't work:</span></li>
             <ul class = "instructions">
                 <li>Turn on the fourth setting in <b>Import Assignments</b> to show detailed error messages and re-upload the file</li>
-                <li>Email nfenger@pps.net or sunil.williams.4@gmail.com with your error message</li>
+                <li>Email nfenger@pps.net with your error message</li>
         </ul>
         <br>
         <br>
