@@ -1836,6 +1836,7 @@ function getCoursesAsync() {
             console.log("courses", courses)
             var currentYearCourses = []
             for (let i = 0; i < courses.length; i++) {
+                console.log(courses[i].sis_course_id)
                 if (courses[i].sis_course_id != null && courses[i].sis_course_id.indexOf(currentSchoolYear) == 0) {
                     currentYearCourses.push(courses[i])
                 }

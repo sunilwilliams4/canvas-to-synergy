@@ -1,17 +1,17 @@
 
 // enter ("Month day, year") for dates
 var startDates = [
-    new Date("August 30, 2022"), // quarter 1
-    new Date("November 7, 2022"), // quarter 2
+    new Date("August 29, 2023"), // quarter 1
+    new Date("November 6, 2023"), // quarter 2
     new Date("January 30, 2023"), // quarter 3
-    new Date("April 11, 2023"), // quarter 4
+    new Date("April 9, 2023"), // quarter 4
 ]
 
 var endDates = [
-    new Date("November 3, 2022"), // quarter 1
-    new Date("January 26, 2023"), // quarter 2
-    new Date("April 7, 2023"), // quarter 3
-    new Date("June 13, 2023"), // quarter 4
+    new Date("November 2, 2023"), // quarter 1
+    new Date("January 25, 2023"), // quarter 2
+    new Date("April 4, 2024"), // quarter 3
+    new Date("June 11, 2024"), // quarter 4
 ]
 
 var currentSchoolYear = endDates[3].getFullYear() // year that appears in sis_course_id for each course
