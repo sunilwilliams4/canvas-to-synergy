@@ -1722,17 +1722,18 @@ class CourseSection extends Section {
                     }
                 }
                 else {
-                    if (this.overallStudentGrades[k].score > 100) {
-                        this.overallStudentGrades[k].score = 100
-                        changedGrades.push({
-                            student: currentStudent,
-                            assignment: this.assignments[k],
-                            oldScore: this.overallStudentGrades[k].score,
-                            newScore: 100
-                        })
-                    }
+
                     let currentDate = filterDate(new Date(Date.now()))
                     for (let k = 0; k < this.overallStudentGrades.length; k++) if (this.overallStudentGrades[k].sis_user_id == currentStudent.sis_user_id) {
+                        if (this.overallStudentGrades[k].score > 100) {
+                            this.overallStudentGrades[k].score = 100
+                            changedGrades.push({
+                                student: currentStudent,
+                                assignment: this.assignments[k],
+                                oldScore: this.overallStudentGrades[k].score,
+                                newScore: 100
+                            })
+                        }
                         exportJSON[currentSection].push({
                             "STUDENT_PERM_ID": this.overallStudentGrades[k].sis_user_id,
                             "STUDENT_LAST_NAME": this.overallStudentGrades[k].sortable_name.slice(0, this.overallStudentGrades[k].sortable_name.indexOf(", ")),
