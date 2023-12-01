@@ -2,13 +2,13 @@
 // enter ("Month day, year") for dates
 var startDates = [
     new Date("August 29, 2023"), // quarter 1
-    new Date("November 6, 2023"), // quarter 2
+    new Date("December 5, 2023"), // quarter 2
     new Date("January 30, 2023"), // quarter 3
     new Date("April 9, 2023"), // quarter 4
 ]
 
 var endDates = [
-    new Date("November 2, 2023"), // quarter 1
+    new Date("December 4, 2023"), // quarter 1
     new Date("January 25, 2023"), // quarter 2
     new Date("April 4, 2024"), // quarter 3
     new Date("June 11, 2024"), // quarter 4
