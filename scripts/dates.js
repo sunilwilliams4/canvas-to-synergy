@@ -3,8 +3,8 @@
 var startDates = [
     new Date("August 29, 2023"), // quarter 1
     new Date("December 5, 2023"), // quarter 2
-    new Date("January 30, 2023"), // quarter 3
-    new Date("April 9, 2023"), // quarter 4
+    new Date("January 30, 2024"), // quarter 3
+    new Date("April 9, 2024"), // quarter 4
 ]
 
 var endDates = [
