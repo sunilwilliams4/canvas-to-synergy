@@ -9,9 +9,9 @@ var startDates = [
 
 var endDates = [
     new Date("December 4, 2023"), // quarter 1
-    new Date("January 25, 2023"), // quarter 2
+    new Date("January 26, 2024"), // quarter 2
     new Date("April 4, 2024"), // quarter 3
-    new Date("June 11, 2024"), // quarter 4
+    new Date("June 14, 2024"), // quarter 4
 ]
 
 var currentSchoolYear = endDates[3].getFullYear() // year that appears in sis_course_id for each course
