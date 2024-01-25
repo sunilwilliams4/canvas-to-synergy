@@ -1794,7 +1794,7 @@ window.onfocus = () => {
     let timeSinceLastRefreshed = Date.now() - CourseSection.lastRefreshedTime
     if (timeSinceLastRefreshed > (5 * 1000) && Section.currentSection instanceof CourseSection) {
         for (let courseSection of courseSections) courseSection.fetched = false
-        Section.currentSection.fetchGrades()
+        //Section.currentSection.fetchGrades()
     }
 }
 
