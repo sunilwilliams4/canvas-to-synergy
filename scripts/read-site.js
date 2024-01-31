@@ -1675,13 +1675,14 @@ class CourseSection extends Section {
                         let currentExcused = false
                         for (let l = 0; l < this.grades[k].length; l++) {
                             if (this.grades[k][l].score > this.assignments[k].points_possible) {
-                                changedGrades.push({
+                                /*changedGrades.push({
                                     student: currentStudent,
                                     assignment: this.assignments[k],
                                     oldScore: this.grades[k][l].score,
                                     newScore: this.assignments[k].points_possible
                                 })
                                 this.grades[k][l].score = this.assignments[k].points_possible
+                                */
                             }
                             if (this.grades[k][l].user_id == currentStudent.id) {
                                 submissionFound = true
